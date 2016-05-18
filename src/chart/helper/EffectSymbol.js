@@ -133,7 +133,6 @@ define(function (require) {
             pos[0] = numberUtil.parsePercent(symbolOffset[0], symbolSize[0]);
             pos[1] = numberUtil.parsePercent(symbolOffset[1], symbolSize[1]);
         }
-        rippleGroup.rotation = (itemModel.getShallow('symbolRotate') || 0) * Math.PI / 180 || 0;
 
         this._symbolType = symbolType;
         this._color = color;
@@ -174,7 +173,6 @@ define(function (require) {
     };
 
     effectSymbolProto.fadeOut = function (cb) {
-        this.off('mouseover').off('mouseout').off('emphasis').off('normal');
         cb && cb();
     };
 

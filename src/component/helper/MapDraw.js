@@ -27,7 +27,7 @@ define(function (require) {
 
                     api.dispatchAction({
                         type: 'mapToggleSelect',
-                        seriesId: mapOrGeoModel.id,
+                        seriesIndex: mapOrGeoModel.seriesIndex,
                         name: name,
                         from: fromView.uid
                     });
@@ -78,7 +78,7 @@ define(function (require) {
 
         constructor: MapDraw,
 
-        draw: function (mapOrGeoModel, ecModel, api, fromView, payload) {
+        draw: function (mapOrGeoModel, ecModel, api, fromView) {
 
             // geoModel has no data
             var data = mapOrGeoModel.getData && mapOrGeoModel.getData();
@@ -86,22 +86,11 @@ define(function (require) {
             var geo = mapOrGeoModel.coordinateSystem;
 
             var group = this.group;
+            group.removeAll();
 
             var scale = geo.scale;
-            var groupNewProp = {
-                position: geo.position,
-                scale: scale
-            };
-
-            // No animation when first draw or in action
-            if (!group.childAt(0) || payload) {
-                group.attr(groupNewProp);
-            }
-            else {
-                graphic.updateProps(group, groupNewProp, mapOrGeoModel);
-            }
-
-            group.removeAll();
+            group.position = geo.position.slice();
+            group.scale = scale.slice();
 
             var itemStyleModel;
             var hoverItemStyleModel;
@@ -129,12 +118,6 @@ define(function (require) {
             zrUtil.each(geo.regions, function (region) {
 
                 var regionGroup = new graphic.Group();
-                var compoundPath = new graphic.CompoundPath({
-                    shape: {
-                        paths: []
-                    }
-                });
-                regionGroup.add(compoundPath);
                 var dataIdx;
                 // Use the itemStyle in data if has data
                 if (data) {
@@ -169,15 +152,18 @@ define(function (require) {
                     var polygon = new graphic.Polygon({
                         shape: {
                             points: contour
-                        }
+                        },
+                        style: {
+                            strokeNoScale: true
+                        },
+                        culling: true
                     });
 
-                    compoundPath.shape.paths.push(polygon);
+                    polygon.setStyle(itemStyle);
+
+                    regionGroup.add(polygon);
                 });
 
-                compoundPath.setStyle(itemStyle);
-                compoundPath.style.strokeNoScale = true;
-                compoundPath.culling = true;
                 // Label
                 var showLabel = labelModel.get('show');
                 var hoverShowLabel = hoverLabelModel.get('show');
@@ -243,33 +229,31 @@ define(function (require) {
             var controller = this._controller;
             controller.zoomLimit = mapOrGeoModel.get('scaleLimit');
             // Update zoom from model
-            controller.zoom = geo.getZoom();
+            controller.zoom = mapOrGeoModel.get('roamDetail.zoom');
             // roamType is will be set default true if it is null
             controller.enable(mapOrGeoModel.get('roam') || false);
-            var mainType = mapOrGeoModel.mainType;
-
-            function makeActionBase() {
-                var action = {
-                    type: 'geoRoam',
-                    componentType: mainType
-                };
-                action[mainType + 'Id'] = mapOrGeoModel.id;
-                return action;
-            }
+            // FIXME mainType, subType 作为 component 的属性？
+            var mainType = mapOrGeoModel.type.split('.')[0];
             controller.off('pan')
                 .on('pan', function (dx, dy) {
-                    api.dispatchAction(zrUtil.extend(makeActionBase(), {
+                    api.dispatchAction({
+                        type: 'geoRoam',
+                        component: mainType,
+                        name: mapOrGeoModel.name,
                         dx: dx,
                         dy: dy
-                    }));
+                    });
                 });
             controller.off('zoom')
                 .on('zoom', function (zoom, mouseX, mouseY) {
-                    api.dispatchAction(zrUtil.extend(makeActionBase(), {
+                    api.dispatchAction({
+                        type: 'geoRoam',
+                        component: mainType,
+                        name: mapOrGeoModel.name,
                         zoom: zoom,
                         originX: mouseX,
                         originY: mouseY
-                    }));
+                    });
 
                     if (this._updateGroup) {
                         var group = this.group;
@@ -282,9 +266,7 @@ define(function (require) {
                     }
                 }, this);
 
-            controller.rectProvider = function () {
-                return geo.getViewRectAfterRoam();
-            };
+            controller.rect = geo.getViewRect();
         }
     };
 

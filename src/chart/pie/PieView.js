@@ -18,7 +18,13 @@ define(function (require) {
             type: 'pieToggleSelect',
             from: uid,
             name: name,
-            seriesId: seriesModel.id
+            seriesId: seriesModel.id,
+            extra: {
+                seriesIndex: seriesModel.seriesIndex,
+                data: seriesModel.get('data'),
+                dataIndex: data.getRawIndex(dataIndex),
+                id: data.getId(dataIndex)
+            }
         });
 
         data.each(function (idx) {
@@ -77,16 +83,69 @@ define(function (require) {
         this.add(polyline);
         this.add(text);
 
+        // 自定义label环绕文字的圆角矩形
+        var rect = new graphic.Rect();
+        // 标签右边的按钮图标
+        var img = new graphic.Image();
+        // 一个透明的矩形，改在标签上面，防止点击时展开圆环
+        var rectCover = new graphic.Rect();
+
+        this.add(rect);
+        this.add(img);
+        this.add(rectCover);
+
         this.updateData(data, idx, true);
 
         // Hover to change label and labelLine
         function onEmphasis() {
             polyline.ignore = polyline.hoverIgnore;
             text.ignore = text.hoverIgnore;
+            // 圆角矩形、和按钮图标的忽略状态
+            rect.ignore = rect.hoverIgnore;
+            img.ignore = img.hoverIgnore;
+            // rectCover的状态跟随rect
+            rectCover.ignore = rect.hoverIgnore;
+
+            var textRect = text.getBoundingRect();
+            var textW = textRect.width;
+            // 如果rect和img都不忽略，rect宽度加宽
+            if (!(rect.ignore || img.ignore)) {
+                rect.animateTo({
+                    shape: {
+                        width: textW + 40
+                    }
+                }, 300, 'elasticOut');
+                rectCover.animateTo({
+                    shape: {
+                        width: textW + 40
+                    }
+                }, 300, 'elasticOut');
+            }
         }
         function onNormal() {
             polyline.ignore = polyline.normalIgnore;
             text.ignore = text.normalIgnore;
+            // 圆角矩形、和按钮图标的忽略状态
+            rect.ignore = rect.normalIgnore;
+            img.ignore = img.normalIgnore;
+            // rectCover的状态跟随rect
+            rectCover.ignore = rect.normalIgnore;
+
+            var textRect = text.getBoundingRect();
+            var textW = textRect.width;
+            // 如果rect不忽略，img忽略，rect宽度回到正常宽度
+            if (!rect.ignore && img.ignore) {
+                rect.animateTo({
+                    shape: {
+                        width: textW + 20
+                    }
+                }, 300, 'elasticOut');
+                rectCover.animateTo({
+                    shape: {
+                        width: textW + 20
+                    }
+                }, 300, 'elasticOut');
+            }
         }
         this.on('emphasis', onEmphasis)
             .on('normal', onNormal)
@@ -102,7 +161,6 @@ define(function (require) {
         return {
             fill: textStyleModel.getTextColor()
                 || (isLabelInside ? '#fff' : data.getItemVisual(idx, 'color')),
-            opacity: data.getItemVisual(idx, 'opacity'),
             textFont: textStyleModel.getFont(),
             text: zrUtil.retrieve(
                 data.hostModel.getFormattedLabel(idx, state), data.getName(idx)
@@ -126,19 +184,19 @@ define(function (require) {
                 shape: {
                     endAngle: layout.endAngle
                 }
-            }, seriesModel, idx);
+            }, seriesModel);
         }
         else {
             graphic.updateProps(sector, {
                 shape: sectorShape
-            }, seriesModel, idx);
+            }, seriesModel);
         }
 
         // Update common style
         var itemStyleModel = itemModel.getModel('itemStyle');
         var visualColor = data.getItemVisual(idx, 'color');
 
-        sector.useStyle(
+        sector.setStyle(
             zrUtil.defaults(
                 {
                     fill: visualColor
@@ -194,6 +252,12 @@ define(function (require) {
         var labelLine = this.childAt(1);
         var labelText = this.childAt(2);
 
+        // 圆角矩形和按钮
+        var labelRect = this.childAt(3);
+        var labelImg = this.childAt(4);
+        // 标签的透明覆盖矩形，状态跟随labelRect
+        var labelRectCover = this.childAt(5);
+
         var seriesModel = data.hostModel;
         var itemModel = data.getItemModel(idx);
         var layout = data.getItemLayout(idx);
@@ -206,14 +270,15 @@ define(function (require) {
                     [labelLayout.x, labelLayout.y], [labelLayout.x, labelLayout.y], [labelLayout.x, labelLayout.y]
                 ]
             }
-        }, seriesModel, idx);
+        }, seriesModel);
 
         graphic.updateProps(labelText, {
             style: {
                 x: labelLayout.x,
                 y: labelLayout.y
             }
-        }, seriesModel, idx);
+        }, seriesModel);
+
         labelText.attr({
             style: {
                 textVerticalAlign: labelLayout.verticalAlign,
@@ -222,7 +287,7 @@ define(function (require) {
             },
             rotation: labelLayout.rotation,
             origin: [labelLayout.x, labelLayout.y],
-            z2: 10
+            z2: 20
         });
 
         var labelModel = itemModel.getModel('label.normal');
@@ -233,17 +298,79 @@ define(function (require) {
 
         labelText.setStyle(getLabelStyle(data, idx, 'normal', labelModel, labelPosition));
 
+        // labelText设置标签文本之后，获取文本的尺寸，添加方框
+        var textRect = labelText.getBoundingRect();
+        var textW = textRect.width;
+
+        graphic.updateProps(labelRect, {
+            shape: {
+                r: [10],
+                x: labelLayout.x - textW/2 - 10,
+                y: labelLayout.y - 9,
+                width: !labelLayout.addBtn || (labelLayout.addBtn && labelLayout.addBtnHover) ? textW+20 : textW+40,
+                height: 20
+            },
+            z2: 10
+        }, seriesModel);
+
+        graphic.updateProps(labelRectCover, {
+            shape: {
+                r: [10],
+                x: labelLayout.x - textW/2 - 10,
+                y: labelLayout.y - 9,
+                width: !labelLayout.addBtn || (labelLayout.addBtn && labelLayout.addBtnHover) ? textW+20 : textW+40,
+                height: 20
+            },
+            z2: 25
+        }, seriesModel);
+
+        if (labelLayout.addBtn) {
+            graphic.updateProps(labelImg, {
+                style: {
+                    image: labelLayout.addBtnImg,
+                    x: labelLayout.x + textW/2 + 10,
+                    y: labelLayout.y - 7,
+                    width: 18,
+                    height: 18
+                },
+                z2: 15
+            }, seriesModel)
+        }
+
         labelText.ignore = labelText.normalIgnore = !labelModel.get('show');
         labelText.hoverIgnore = !labelHoverModel.get('show');
 
         labelLine.ignore = labelLine.normalIgnore = !labelLineModel.get('show');
         labelLine.hoverIgnore = !labelLineHoverModel.get('show');
 
+        // 圆角矩形和按钮
+        labelRect.ignore = labelRect.normalIgnore = ((labelPosition == 'circle-center' || labelPosition == 'btn-center') && labelModel.get('show')) ? false : true;
+        // labelRect.ignore = labelRect.normalIgnore;
+        labelRect.hoverIgnore = ((labelPosition == 'circle-center' || labelPosition == 'btn-center') && labelModel.get('show')) ? false : true;
+        labelRectCover.ignore = labelRect.normalIgnore;
+        labelRectCover.hoverIgnore = labelRect.hoverIgnore;
+        
+        labelImg.ignore = labelImg.normalIgnore = (!labelLayout.addBtn) || (labelLayout.addBtn && labelLayout.addBtnHover);
+        // labelImg.hoverIgnore = labelRect.hoverIgnore || ((!labelLayout.addBtn) || (labelLayout.addBtn && (!labelLayout.addBtnHover)));
+        labelImg.hoverIgnore = (!labelLayout.addBtn) || labelRect.hoverIgnore;
+
         // Default use item visual color
         labelLine.setStyle({
-            stroke: visualColor,
-            opacity: data.getItemVisual(idx, 'opacity')
+            stroke: visualColor
         });
+
+        var rectColor = 'rgba(255,0,0,0.3)';
+        if (labelLayout.addBtnColor) {
+            rectColor = labelLayout.addBtnColor;
+        }
+        // rectCover全透明
+        labelRectCover.setStyle({
+            fill: 'rgba(0,0,0,0)'
+        });
+        labelRect.setStyle({
+            fill: rectColor
+        });
+
         labelLine.setStyle(labelLineModel.getModel('lineStyle').getLineStyle());
 
         labelText.hoverStyle = getLabelStyle(data, idx, 'emphasis', labelHoverModel, labelPosition);
@@ -286,6 +413,11 @@ define(function (require) {
             var onSectorClick = zrUtil.curry(
                 updateDataSelected, this.uid, seriesModel, hasAnimation, api
             );
+            var shapeClick = function (event) {
+                if (event.target.type != 'rect') {
+                    onSectorClick.call(this, event);
+                }
+            };
 
             var selectedMode = seriesModel.get('selectedMode');
 
@@ -298,7 +430,7 @@ define(function (require) {
                         });
                     }
 
-                    selectedMode && piePiece.on('click', onSectorClick);
+                    selectedMode && piePiece.on('click', shapeClick);
 
                     data.setItemGraphicEl(idx, piePiece);
 
@@ -310,7 +442,7 @@ define(function (require) {
                     piePiece.updateData(data, newIdx);
 
                     piePiece.off('click');
-                    selectedMode && piePiece.on('click', onSectorClick);
+                    selectedMode && piePiece.on('click', shapeClick);
                     group.add(piePiece);
                     data.setItemGraphicEl(newIdx, piePiece);
                 })

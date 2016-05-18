@@ -39,7 +39,13 @@ define(function (require) {
          */
         unSelect: function (name) {
             var dataOpt = this._dataOptMap[name];
-            // var selectedMode = this.get('selectedMode');
+            var selectedMode = this.get('selectedMode');
+            var preventUnselect = this.get('preventUnselect');
+
+            // 单选状态下设置了preventUnselect，点击选中的项时，阻止选中取消
+            if (selectedMode === 'single' && preventUnselect) {
+                return;
+            }
             // selectedMode !== 'single' && dataOpt && (dataOpt.selected = false);
             dataOpt && (dataOpt.selected = false);
         },

@@ -45,6 +45,10 @@ define(function (require) {
 
     // FIXME
     var markPointFormatMixin = {
+        getRawDataArray: function () {
+            return this.option.data;
+        },
+
         formatTooltip: function (dataIndex) {
             var data = this.getData();
             var value = this.getRawValue(dataIndex);

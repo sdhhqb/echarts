@@ -11,7 +11,14 @@ define(function (require) {
 
     var CATEGORY_DEFAULT_VISUAL_INDEX = -1;
 
-
+    function linearMapArray(val, domain, range, clamp) {
+        if (zrUtil.isArray(val)) {
+            return zrUtil.map(val, function (v) {
+                return linearMap(v, domain, range, clamp);
+            });
+        }
+        return linearMap(val, domain, range, clamp);
+    }
     /**
      * @param {Object} option
      * @param {string} [option.type] See visualHandlers.
@@ -36,19 +43,12 @@ define(function (require) {
      *                                            (like: {cate1: '#222', none: '#fff'})
      *                                            or primary types (which represents
      *                                            defualt category visual), otherwise visual
-     *                                            can be array or primary (which will be
-     *                                            normalized to array).
+     *                                            can only be array.
      *
      */
     var VisualMapping = function (option) {
         var mappingMethod = option.mappingMethod;
         var visualType = option.type;
-
-        /**
-         * @readOnly
-         * @type {Object}
-         */
-        var thisOption = this.option = zrUtil.clone(option);
 
         /**
          * @readOnly
@@ -61,6 +61,12 @@ define(function (require) {
          * @type {string}
          */
         this.mappingMethod = mappingMethod;
+
+        /**
+         * @readOnly
+         * @type {Object}
+         */
+        var thisOption = this.option = zrUtil.clone(option);
 
         /**
          * @private
@@ -79,19 +85,10 @@ define(function (require) {
         zrUtil.extend(this, visualHandlers[visualType]);
 
         if (mappingMethod === 'piecewise') {
-            normalizeVisualRange(thisOption);
             preprocessForPiecewise(thisOption);
         }
-        else if (mappingMethod === 'category') {
-            thisOption.categories
-                ? preprocessForSpecifiedCategory(thisOption)
-                // categories is ordinal when thisOption.categories not specified,
-                // which need no more preprocess except normalize visual.
-                : normalizeVisualRange(thisOption, true);
-        }
-        else { // mappingMethod === 'linear'
-            zrUtil.assert(thisOption.dataExtent);
-            normalizeVisualRange(thisOption);
+        if (mappingMethod === 'category') {
+            preprocessForCategory(thisOption);
         }
     };
 
@@ -124,7 +121,6 @@ define(function (require) {
                 var visual = isCategory(this)
                     ? this.option.visual
                     : zrUtil.map(this.option.visual, zrColor.parse);
-
                 return zrUtil.bind(
                     isCategory(this)
                     ? function (value, isNormalized) {
@@ -141,18 +137,38 @@ define(function (require) {
                     }, this);
             },
 
+            // value:
+            // (1) {number}
+            // (2) {Array.<number>} Represents a interval, for colorStops.
+            // Return type:
+            // (1) {string} color value like '#444'
+            // (2) {Array.<Object>} colorStops,
+            // like [{color: '#fff', offset: 0}, {color: '#444', offset: 1}]
+            // where offset is between 0 and 1.
             mapValueToVisual: function (value) {
                 var visual = this.option.visual;
-                var normalized = this._normalizeData(value);
-                var result = this._getSpecifiedVisual(value);
 
-                if (result == null) {
-                    result = isCategory(this)
-                        ? getVisualForCategory(this, visual, normalized)
-                        : zrColor.mapToColor(normalized, visual);
+                if (zrUtil.isArray(value)) {
+                    value = [
+                        this._normalizeData(value[0]),
+                        this._normalizeData(value[1])
+                    ];
+
+                    // For creating gradient color list.
+                    return zrColor.mapIntervalToColor(value, visual);
                 }
+                else {
+                    var normalized = this._normalizeData(value);
+                    var result = this._getSpecifiedVisual(value);
 
-                return result;
+                    if (result == null) {
+                        result = isCategory(this)
+                            ? getVisualForCategory(this, visual, normalized)
+                            : zrColor.mapToColor(normalized, visual);
+                    }
+
+                    return result;
+                }
             }
         },
 
@@ -171,25 +187,6 @@ define(function (require) {
         colorAlpha: makePartialColorVisualHandler(function (color, value) {
             return zrColor.modifyAlpha(color, value);
         }),
-
-        opacity: {
-            applyVisual: function (value, getter, setter) {
-                setter('opacity', this.mapValueToVisual(value));
-            },
-
-            mapValueToVisual: function (value) {
-                var normalized = this._normalizeData(value);
-                var result = this._getSpecifiedVisual(value);
-                var visual = this.option.visual;
-
-                if (result == null) {
-                    result = isCategory(this)
-                        ? getVisualForCategory(this, visual, normalized)
-                        : linearMap(normalized, [0, 1], visual, true);
-                }
-                return result;
-            }
-        },
 
         symbol: {
             applyVisual: function (value, getter, setter) {
@@ -234,7 +231,7 @@ define(function (require) {
                 if (result == null) {
                     result = isCategory(this)
                         ? getVisualForCategory(this, visual, normalized)
-                        : linearMap(normalized, [0, 1], visual, true);
+                        : linearMapArray(normalized, [0, 1], visual, true);
                 }
                 return result;
             }
@@ -247,18 +244,27 @@ define(function (require) {
 
         zrUtil.each(pieceList, function (piece, index) {
             piece.originIndex = index;
-            // piece.visual is "result visual value" but not
-            // a visual range, so it does not need to be normalized.
-            if (piece.visual != null) {
+            if (piece.visual) {
                 thisOption.hasSpecialVisual = true;
             }
         });
     }
 
-    function preprocessForSpecifiedCategory(thisOption) {
+    function preprocessForCategory(thisOption) {
         // Hash categories.
         var categories = thisOption.categories;
         var visual = thisOption.visual;
+        var isVisualArray = zrUtil.isArray(visual);
+
+        if (!categories) {
+            if (!isVisualArray) {
+                // visual should be array when no categories.
+                throw new Error();
+            }
+            else {
+                return;
+            }
+        }
 
         var categoryMap = thisOption.categoryMap = {};
         each(categories, function (cate, index) {
@@ -266,7 +272,7 @@ define(function (require) {
         });
 
         // Process visual map input.
-        if (!zrUtil.isArray(visual)) {
+        if (!isVisualArray) {
             var visualArr = [];
 
             if (zrUtil.isObject(visual)) {
@@ -292,39 +298,28 @@ define(function (require) {
         }
     }
 
-    function normalizeVisualRange(thisOption, isCategory) {
-        var visual = thisOption.visual;
-        var visualArr = [];
-
-        if (zrUtil.isObject(visual)) {
-            each(visual, function (v) {
-                visualArr.push(v);
-            });
-        }
-        else if (visual != null) {
-            visualArr.push(visual);
-        }
-
-        var doNotNeedPair = {'color': 1, 'symbol': 1};
-
-        if (!isCategory
-            && visualArr.length === 1
-            && !(thisOption.type in doNotNeedPair)
-        ) {
-            // Do not care visualArr.length === 0, which is illegal.
-            visualArr[1] = visualArr[0];
-        }
-
-        thisOption.visual = visualArr;
-    }
-
     function makePartialColorVisualHandler(applyValue) {
         return {
 
             applyVisual: function (value, getter, setter) {
-                value = this.mapValueToVisual(value);
-                // Must not be array value
-                setter('color', applyValue(getter('color'), value));
+                // color can be {string} or {Array.<Object>} (for gradient color stops)
+                var color = getter('color');
+                var isArrayValue = zrUtil.isArray(value);
+                value = isArrayValue
+                    ? [this.mapValueToVisual(value[0]), this.mapValueToVisual(value[1])]
+                    : this.mapValueToVisual(value);
+
+                if (zrUtil.isArray(color)) {
+                    for (var i = 0, len = color.length; i < len; i++) {
+                        color[i].color = applyValue(
+                            color[i].color, isArrayValue ? value[i] : value
+                        );
+                    }
+                }
+                else {
+                    // Must not be array value
+                    setter('color', applyValue(color, value));
+                }
             },
 
             mapValueToVisual: function (value) {
@@ -335,7 +330,7 @@ define(function (require) {
                 if (result == null) {
                     result = isCategory(this)
                         ? getVisualForCategory(this, visual, normalized)
-                        : linearMap(normalized, [0, 1], visual, true);
+                        : linearMapArray(normalized, [0, 1], visual, true);
                 }
                 return result;
             }
@@ -344,7 +339,7 @@ define(function (require) {
 
     function arrayGetByNormalizedValue(arr, normalized) {
         return arr[
-            Math.round(linearMap(normalized, [0, 1], [0, arr.length - 1], true))
+            Math.round(linearMapArray(normalized, [0, 1], [0, arr.length - 1], true))
         ];
     }
 
@@ -368,14 +363,14 @@ define(function (require) {
     var normalizers = {
 
         linear: function (value) {
-            return linearMap(value, this.option.dataExtent, [0, 1], true);
+            return linearMapArray(value, this.option.dataExtent, [0, 1], true);
         },
 
         piecewise: function (value) {
             var pieceList = this.option.pieceList;
             var pieceIndex = VisualMapping.findPieceIndex(value, pieceList);
             if (pieceIndex != null) {
-                return linearMap(pieceIndex, [0, pieceList.length - 1], [0, 1], true);
+                return linearMapArray(pieceIndex, [0, pieceList.length - 1], [0, 1], true);
             }
         },
 
@@ -458,6 +453,21 @@ define(function (require) {
     };
 
     /**
+     * 'color', 'colorSaturation', 'colorAlpha', ... are in the same visualCluster named 'color'.
+     * Other visuals are in the cluster named as the same as theirselves.
+     *
+     * @public
+     * @param {string} visualType
+     * @param {string} visualCluster
+     * @return {boolean}
+     */
+    VisualMapping.isInVisualCluster = function (visualType, visualCluster) {
+        return visualCluster === 'color'
+            ? !!(visualType && visualType.indexOf(visualCluster) === 0)
+            : visualType === visualCluster;
+    };
+
+    /**
      * @public
      * @param {Object} obj
      * @return {Oject} new object containers visual values.
@@ -508,21 +518,6 @@ define(function (require) {
         });
 
         return visualTypes;
-    };
-
-    /**
-     * 'color', 'colorSaturation', 'colorAlpha', ... are depends on 'color'.
-     * Other visuals are only depends on themself.
-     *
-     * @public
-     * @param {string} visualType1
-     * @param {string} visualType2
-     * @return {boolean}
-     */
-    VisualMapping.dependsOn = function (visualType1, visualType2) {
-        return visualType2 === 'color'
-            ? !!(visualType1 && visualType1.indexOf(visualType2) === 0)
-            : visualType1 === visualType2;
     };
 
     /**

@@ -124,8 +124,8 @@ define(function (require) {
         var rect = el && el.getBoundingRect().clone();
         el && rect.applyTransform(el.transform);
         if (typeof positionExpr === 'function') {
-            // Callback of position can be an array or a string specify the position
-            positionExpr = positionExpr([x, y], params, content.el, rect);
+            // Callback of position can be an array or a string specify the positiont
+            positionExpr = positionExpr([x, y], params, rect);
         }
 
         if (zrUtil.isArray(positionExpr)) {
@@ -251,32 +251,18 @@ define(function (require) {
             }
 
             var zr = this._api.getZr();
-            zr.off('click', this._tryShow);
-            zr.off('mousemove', this._mousemove);
+            var tryShow = this._tryShow;
+            zr.off('click', tryShow);
+            zr.off('mousemove', tryShow);
             zr.off('mouseout', this._hide);
-            zr.off('globalout', this._hide);
             if (tooltipModel.get('triggerOn') === 'click') {
-                zr.on('click', this._tryShow, this);
+                zr.on('click', tryShow, this);
             }
             else {
-                zr.on('mousemove', this._mousemove, this);
+                zr.on('mousemove', tryShow, this);
                 zr.on('mouseout', this._hide, this);
-                zr.on('globalout', this._hide, this);
             }
-        },
 
-        _mousemove: function (e) {
-            var showDelay = this._tooltipModel.get('showDelay');
-            var self = this;
-            clearTimeout(this._showTimeout);
-            if (showDelay > 0) {
-                this._showTimeout = setTimeout(function () {
-                    self._tryShow(e);
-                }, showDelay);
-            }
-            else {
-                this._tryShow(e);
-            }
         },
 
         /**
@@ -327,11 +313,7 @@ define(function (require) {
                     var coordSys = seriesModel.coordinateSystem;
                     if (coordSys && coordSys.dataToPoint) {
                         var point = coordSys.dataToPoint(
-                            data.getValues(
-                                zrUtil.map(coordSys.dimensions, function (dim) {
-                                    return seriesModel.coordDimToDataDim(dim)[0];
-                                }), dataIndex, true
-                            )
+                            data.getValues(coordSys.dimensions, dataIndex, true)
                         );
                         cx = point && point[0];
                         cy = point && point[1];
@@ -448,7 +430,7 @@ define(function (require) {
                     // Reset last hover and dispatch downplay action
                     this._resetLastHover();
 
-                    this._showItemTooltipContent(dataModel, dataIndex, el.dataType, e);
+                    this._showItemTooltipContent(dataModel, dataIndex, e);
                 }
 
                 api.dispatchAction({
@@ -496,13 +478,20 @@ define(function (require) {
                 if (el && el.dataIndex != null) {
                     var seriesModel = ecModel.getSeriesByIndex(el.seriesIndex);
                     var dataIndex = el.dataIndex;
-                    this._showItemTooltipContent(seriesModel, dataIndex, el.dataType, e);
+                    this._showItemTooltipContent(seriesModel, dataIndex, e);
                 }
             }
 
             this._showAxisPointer();
             var allNotShow = true;
-            zrUtil.each(this._seriesGroupByAxis, function (seriesCoordSysSameAxis) {
+            // 有两条x坐标轴时，在tooltip配置里面设置onlyOneAxisTip为true时，只允许第一条坐标轴有tooltip
+            var onlyOneAxisTip = tooltipModel.get('onlyOneAxisTip');
+            zrUtil.each(this._seriesGroupByAxis, function (seriesCoordSysSameAxis, index) {
+                if (onlyOneAxisTip) {
+                    if (index != 'x0') {
+                        return;                        
+                    }
+                }
                 // Try show the axis pointer
                 var allCoordSys = seriesCoordSysSameAxis.coordSys;
                 var coordSys = allCoordSys[0];
@@ -569,10 +558,6 @@ define(function (require) {
                     );
                 }
             }, this);
-
-            if (!this._tooltipModel.get('show')) {
-                this._hideAxisPointer();
-            }
 
             if (allNotShow) {
                 this._hide();
@@ -862,7 +847,7 @@ define(function (require) {
                 ? (isShadow ? 'Sector' : (axisType === 'radius' ? 'Circle' : 'Line'))
                 : (isShadow ? 'Rect' : 'Line');
 
-            isShadow ? (style.stroke = null) : (style.fill = null);
+           isShadow ? (style.stroke = null) : (style.fill = null);
 
             var el = axisPointers[coordSysName][axisType] = new graphic[elementType]({
                 style: style,
@@ -930,7 +915,7 @@ define(function (require) {
                 from: this.uid
             });
 
-            if (baseAxis && rootTooltipModel.get('showContent') && rootTooltipModel.get('show')) {
+            if (baseAxis && rootTooltipModel.get('showContent')) {
 
                 var formatter = rootTooltipModel.get('formatter');
                 var positionExpr = rootTooltipModel.get('position');
@@ -999,13 +984,12 @@ define(function (require) {
          * Show tooltip on item
          * @param {module:echarts/model/Series} seriesModel
          * @param {number} dataIndex
-         * @param {string} dataType
          * @param {Object} e
          */
-        _showItemTooltipContent: function (seriesModel, dataIndex, dataType, e) {
+        _showItemTooltipContent: function (seriesModel, dataIndex, e) {
             // FIXME Graph data
             var api = this._api;
-            var data = seriesModel.getData(dataType);
+            var data = seriesModel.getData();
             var itemModel = data.getItemModel(dataIndex);
 
             var rootTooltipModel = this._tooltipModel;
@@ -1022,13 +1006,13 @@ define(function (require) {
                 tooltipModel.parentModel = this._tooltipModel;
             }
 
-            if (tooltipModel.get('showContent') && tooltipModel.get('show')) {
+            if (tooltipModel.get('showContent')) {
                 var formatter = tooltipModel.get('formatter');
                 var positionExpr = tooltipModel.get('position');
-                var params = seriesModel.getDataParams(dataIndex, dataType);
+                var params = seriesModel.getDataParams(dataIndex);
                 var html;
                 if (!formatter) {
-                    html = seriesModel.formatTooltip(dataIndex, false, dataType);
+                    html = seriesModel.formatTooltip(dataIndex);
                 }
                 else {
                     if (typeof formatter === 'string') {
@@ -1109,8 +1093,6 @@ define(function (require) {
         },
 
         _hide: function () {
-            clearTimeout(this._showTimeout);
-
             this._hideAxisPointer();
             this._resetLastHover();
             if (!this._alwaysShowContent) {
@@ -1121,8 +1103,6 @@ define(function (require) {
                 type: 'hideTip',
                 from: this.uid
             });
-
-            this._lastX = this._lastY = null;
         },
 
         dispose: function (ecModel, api) {
@@ -1133,9 +1113,8 @@ define(function (require) {
             this._tooltipContent.hide();
 
             zr.off('click', this._tryShow);
-            zr.off('mousemove', this._mousemove);
+            zr.off('mousemove', this._tryShow);
             zr.off('mouseout', this._hide);
-            zr.off('globalout', this._hide);
 
             api.off('showTip', this._manuallyShowTip);
             api.off('hideTip', this._manuallyHideTip);

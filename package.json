@@ -33,7 +33,7 @@
   },
   "scripts": {
     "prepublish": "node build/amd2common.js",
-    "dev": "webpack-dev-server --inline --content-base . --port 8088 --no-info"
+    "dev": "webpack-dev-server --inline --content-base . --port 8088"
   },
   "dependencies": {
     "zrender": "^3.0.9"

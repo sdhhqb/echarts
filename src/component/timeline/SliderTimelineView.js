@@ -13,6 +13,7 @@ define(function (require) {
     var BoundingRect = require('zrender/core/BoundingRect');
     var matrix = require('zrender/core/matrix');
     var numberUtil = require('../../util/number');
+    var modelUtil = require('../../util/model');
     var formatUtil = require('../../util/format');
     var encodeHTML = formatUtil.encodeHTML;
 
@@ -83,10 +84,6 @@ define(function (require) {
                  * @type {module:echarts/component/timeline/TimelineAxis}
                  */
                 var axis = this._axis = this._createAxis(layoutInfo, timelineModel);
-
-                timelineModel.formatTooltip = function (dataIndex) {
-                    return encodeHTML(axis.scale.getLabel(dataIndex));
-                };
 
                 each(
                     ['AxisLine', 'AxisTick', 'Control', 'CurrentPointer'],
@@ -354,6 +351,7 @@ define(function (require) {
         _renderAxisTick: function (layoutInfo, group, axis, timelineModel) {
             var data = timelineModel.getData();
             var ticks = axis.scale.getTicks();
+            var tooltipHostModel = this._prepareTooltipHostModel(data, timelineModel);
 
             each(ticks, function (value, dataIndex) {
 
@@ -370,13 +368,29 @@ define(function (require) {
 
                 if (itemModel.get('tooltip')) {
                     el.dataIndex = dataIndex;
-                    el.dataModel = timelineModel;
+                    el.dataModel = tooltipHostModel;
                 }
                 else {
                     el.dataIndex = el.dataModel = null;
                 }
 
             }, this);
+        },
+
+        /**
+         * @private
+         */
+        _prepareTooltipHostModel: function (data, timelineModel) {
+            var tooltipHostModel = modelUtil.createDataFormatModel(
+                {}, data, timelineModel.get('data')
+            );
+            var me = this;
+
+            tooltipHostModel.formatTooltip = function (dataIndex) {
+                return encodeHTML(me._axis.scale.getLabel(dataIndex));
+            };
+
+            return tooltipHostModel;
         },
 
         /**

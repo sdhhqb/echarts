@@ -57,87 +57,85 @@ define(function (require) {
                     ? 'right' : 'left';
             }
 
+            // legend有哪些类型
+            var legendItemMap = {};
+            // 已经绘制的legend
             var legendDrawedMap = {};
-
+            // 处理legend的data数组中的对象
             zrUtil.each(legendModel.getData(), function (itemModel) {
-                var name = itemModel.get('name');
-
+                var seriesName = itemModel.get('name');
                 // Use empty string or \n as a newline string
-                if (name === '' || name === '\n') {
+                if (seriesName === '' || seriesName === '\n') {
                     group.add(new graphic.Group({
                         newline: true
                     }));
-                    return;
                 }
 
-                var seriesModel = ecModel.getSeriesByName(name)[0];
+                var seriesModel = ecModel.getSeriesByName(seriesName)[0];
 
-                if (legendDrawedMap[name]) {
+                legendItemMap[seriesName] = itemModel;
+
+                if (!seriesModel || legendDrawedMap[seriesName]) {
                     // Series not exists
                     return;
                 }
 
-                // Series legend
-                if (seriesModel) {
-                    var data = seriesModel.getData();
-                    var color = data.getVisual('color');
+                var data = seriesModel.getData();
+                var color = data.getVisual('color');
 
-                    // If color is a callback function
-                    if (typeof color === 'function') {
-                        // Use the first data
-                        color = color(seriesModel.getDataParams(0));
-                    }
-
-                    // Using rect symbol defaultly
-                    var legendSymbolType = data.getVisual('legendSymbol') || 'roundRect';
-                    var symbolType = data.getVisual('symbol');
-
-                    var itemGroup = this._createItem(
-                        name, itemModel, legendModel,
-                        legendSymbolType, symbolType,
-                        itemAlign, color,
-                        selectMode
-                    );
-
-                    itemGroup.on('click', curry(dispatchSelectAction, name, api))
-                        .on('mouseover', curry(dispatchHighlightAction, seriesModel, '', api))
-                        .on('mouseout', curry(dispatchDownplayAction, seriesModel, '', api));
-
-                    legendDrawedMap[name] = true;
+                // If color is a callback function
+                if (typeof color === 'function') {
+                    // Use the first data
+                    color = color(seriesModel.getDataParams(0));
                 }
-                else {
-                    // Data legend of pie, funnel
-                    ecModel.eachRawSeries(function (seriesModel) {
-                        // In case multiple series has same data name
-                        if (legendDrawedMap[name]) {
+
+                // Using rect symbol defaultly
+                var legendSymbolType = data.getVisual('legendSymbol') || 'roundRect';
+                var symbolType = data.getVisual('symbol');
+
+                var itemGroup = this._createItem(
+                    seriesName, itemModel, legendModel,
+                    legendSymbolType, symbolType,
+                    itemAlign, color,
+                    selectMode
+                );
+
+                itemGroup.on('click', curry(dispatchSelectAction, seriesName, api))
+                    .on('mouseover', curry(dispatchHighlightAction, seriesModel, '', api))
+                    .on('mouseout', curry(dispatchDownplayAction, seriesModel, '', api));
+
+                legendDrawedMap[seriesName] = true;
+            }, this);
+
+            ecModel.eachRawSeries(function (seriesModel) {
+                if (seriesModel.legendDataProvider) {
+                    var data = seriesModel.legendDataProvider();
+                    data.each(function (idx) {
+                        var name = data.getName(idx);
+
+                        // Avoid mutiple series use the same data name
+                        if (!legendItemMap[name] || legendDrawedMap[name]) {
                             return;
                         }
-                        if (seriesModel.legendDataProvider) {
-                            var data = seriesModel.legendDataProvider();
-                            var idx = data.indexOfName(name);
-                            if (idx < 0) {
-                                return;
-                            }
 
-                            var color = data.getItemVisual(idx, 'color');
+                        var color = data.getItemVisual(idx, 'color');
 
-                            var legendSymbolType = 'roundRect';
+                        var legendSymbolType = 'roundRect';
 
-                            var itemGroup = this._createItem(
-                                name, itemModel, legendModel,
-                                legendSymbolType, null,
-                                itemAlign, color,
-                                selectMode
-                            );
+                        var itemGroup = this._createItem(
+                            name, legendItemMap[name], legendModel,
+                            legendSymbolType, null,
+                            itemAlign, color,
+                            selectMode
+                        );
 
-                            itemGroup.on('click', curry(dispatchSelectAction, name, api))
-                                // FIXME Should not specify the series name
-                                .on('mouseover', curry(dispatchHighlightAction, seriesModel, name, api))
-                                .on('mouseout', curry(dispatchDownplayAction, seriesModel, name, api));
+                        itemGroup.on('click', curry(dispatchSelectAction, name, api))
+                            // FIXME Should not specify the series name
+                            .on('mouseover', curry(dispatchHighlightAction, seriesModel, name, api))
+                            .on('mouseout', curry(dispatchDownplayAction, seriesModel, name, api));
 
-                            legendDrawedMap[name] = true;
-                        }
-                    }, this);
+                        legendDrawedMap[name] = true;
+                    }, false, this);
                 }
             }, this);
 

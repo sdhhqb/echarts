@@ -15,9 +15,9 @@ define(function (require) {
             this.group.add(mapDraw.group);
         },
 
-        render: function (geoModel, ecModel, api, payload) {
+        render: function (geoModel, ecModel, api) {
             geoModel.get('show') &&
-                this._mapDraw.draw(geoModel, ecModel, api, this, payload);
+                this._mapDraw.draw(geoModel, ecModel, api);
         }
     });
 });

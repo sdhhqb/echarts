@@ -48,6 +48,7 @@ define(function (require) {
             max = originalExtent[1] + boundaryGap[1] * span;
             fixMax = false;
         }
+        // TODO Only one data
         if (min === 'dataMin') {
             min = originalExtent[0];
         }
@@ -73,29 +74,8 @@ define(function (require) {
         var extent = axisHelper.getScaleExtent(axis, model);
         var fixMin = (model.getMin ? model.getMin() : model.get('min')) != null;
         var fixMax = (model.getMax ? model.getMax() : model.get('max')) != null;
-        var splitNumber = model.get('splitNumber');
         scale.setExtent(extent[0], extent[1]);
-        scale.niceExtent(splitNumber, fixMin, fixMax);
-
-        // Use minInterval to constraint the calculated interval.
-        // If calculated interval is less than minInterval. increase the interval quantity until
-        // it is larger than minInterval.
-        // For example:
-        //  minInterval is 1, calculated interval is 0.2, so increase it to be 1. In this way we can get
-        //  an integer axis.
-        var minInterval = model.get('minInterval');
-        if (isFinite(minInterval) && !fixMin && !fixMax && scale.type === 'interval') {
-            var interval = scale.getInterval();
-            var intervalScale = Math.max(Math.abs(interval), minInterval) / interval;
-            // while (interval < minInterval) {
-            //     var quantity = numberUtil.quantity(interval);
-            //     interval = quantity * 10;
-            //     scaleQuantity *= 10;
-            // }
-            extent = scale.getExtent();
-            scale.setExtent(intervalScale * extent[0], extent[1] * intervalScale);
-            scale.niceExtent(splitNumber);
-        }
+        scale.niceExtent(model.get('splitNumber'), fixMin, fixMax);
 
         // If some one specified the min, max. And the default calculated interval
         // is not good enough. He can specify the interval. It is often appeared
@@ -148,7 +128,7 @@ define(function (require) {
      * @param {boolean} isAxisHorizontal
      * @return {number}
      */
-    axisHelper.getAxisLabelInterval = function (tickCoords, labels, font, isAxisHorizontal) {
+    axisHelper.getAxisLabelInterval = function (tickCoords, labels, font, isAxisHorizontal, splitNumber) {
         // FIXME
         // 不同角的axis和label，不只是horizontal和vertical.
 
@@ -160,6 +140,9 @@ define(function (require) {
         if (labels.length > 40) {
             // Simple optimization for large amount of labels
             step = Math.round(labels.length / 40);
+        }
+        if (splitNumber > 0) {
+            return Math.round(labels.length/splitNumber - 1);
         }
         for (var i = 0; i < tickCoords.length; i += step) {
             var tickCoord = tickCoords[i];

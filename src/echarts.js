@@ -21,7 +21,9 @@ define(function (require) {
     var ComponentModel = require('./model/Component');
     var SeriesModel = require('./model/Series');
 
+    // 根组件视图，其他组件从这里扩展出来
     var ComponentView = require('./view/Component');
+    // 根图表视图，其他图表从这里扩展出来
     var ChartView = require('./view/Chart');
     var graphic = require('./util/graphic');
 
@@ -178,7 +180,7 @@ define(function (require) {
                 null, null, this._theme, new OptionManager(this._api)
             );
         }
-
+        // 调用this._model中的setOption，最终调用的是OptionManager类中的setOption方法
         this._model.setOption(option, optionPreprocessorFuncs);
 
         updateMethods.prepareAndUpdate.call(this);
@@ -367,7 +369,6 @@ define(function (require) {
                 return;
             }
 
-            // Fixme First time update ?
             ecModel.restoreData();
 
             // TODO
@@ -681,6 +682,7 @@ define(function (require) {
         var viewMap = isComponent ? this._componentsMap : this._chartsMap;
         var zr = this._zr;
 
+        // viewList中所有的对象都设置为dead状态
         for (var i = 0; i < viewList.length; i++) {
             viewList[i].__alive = false;
         }
@@ -700,6 +702,7 @@ define(function (require) {
             var view = viewMap[viewId];
             if (!view) {
                 var classType = ComponentModel.parseClassType(model.type);
+                // 从组件视图和chart视图中取得各种子类型的class，生成view对象
                 var Clazz = isComponent
                     ? ComponentView.getClass(classType.main, classType.sub)
                     : ChartView.getClass(classType.sub);
@@ -722,6 +725,7 @@ define(function (require) {
             view.__model = model;
         }, this);
 
+        // 清除dead状态的view对象
         for (var i = 0; i < viewList.length;) {
             var view = viewList[i];
             if (!view.__alive) {
@@ -819,8 +823,6 @@ define(function (require) {
             chartView.__alive = true;
             chartView.render(seriesModel, ecModel, api, payload);
 
-            chartView.group.silent = !!seriesModel.get('silent');
-
             updateZ(seriesModel, chartView);
         }, this);
 
@@ -839,20 +841,17 @@ define(function (require) {
      * @private
      */
     echartsProto._initEvents = function () {
+        var zr = this._zr;
         each(MOUSE_EVENT_NAMES, function (eveName) {
-            this._zr.on(eveName, function (e) {
+            zr.on(eveName, function (e) {
                 var ecModel = this.getModel();
                 var el = e.target;
                 if (el && el.dataIndex != null) {
                     var dataModel = el.dataModel || ecModel.getSeriesByIndex(el.seriesIndex);
-                    var params = dataModel && dataModel.getDataParams(el.dataIndex, el.dataType) || {};
+                    var params = dataModel && dataModel.getDataParams(el.dataIndex) || {};
                     params.event = e;
                     params.type = eveName;
                     this.trigger(eveName, params);
-                }
-                // If element has custom eventData of components
-                else if (el && el.eventData) {
-                    this.trigger(eveName, el.eventData);
                 }
             }, this);
         }, this);
@@ -970,9 +969,9 @@ define(function (require) {
         /**
          * @type {number}
          */
-        version: '3.1.9',
+        version: '3.1.5',
         dependencies: {
-            zrender: '3.0.9'
+            zrender: '3.0.6'
         }
     };
 
@@ -1200,6 +1199,7 @@ define(function (require) {
 
     /**
      * @param {Object} opts
+     * 从根图表视图中扩展新的图表视图
      */
     echarts.extendChartView = function (opts) {
         return ChartView.extend(opts);
@@ -1207,6 +1207,7 @@ define(function (require) {
 
     /**
      * @param {Object} opts
+     * 从根组件模型中扩展新的组件模型
      */
     echarts.extendComponentModel = function (opts) {
         return ComponentModel.extend(opts);
@@ -1221,6 +1222,7 @@ define(function (require) {
 
     /**
      * @param {Object} opts
+     * 从根组件视图中扩展新的组件视图
      */
     echarts.extendComponentView = function (opts) {
         return ComponentView.extend(opts);

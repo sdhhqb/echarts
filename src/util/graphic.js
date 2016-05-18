@@ -38,8 +38,6 @@ define(function(require) {
 
     graphic.Arc = require('zrender/graphic/shape/Arc');
 
-    graphic.CompoundPath = require('zrender/graphic/CompoundPath');
-
     graphic.LinearGradient = require('zrender/graphic/LinearGradient');
 
     graphic.RadialGradient = require('zrender/graphic/RadialGradient');
@@ -195,28 +193,24 @@ define(function(require) {
             : (doubledPosition + (positiveOrNegative ? 1 : -1)) / 2;
     };
 
-    function hasFillOrStroke(fillOrStroke) {
-        return fillOrStroke != null && fillOrStroke != 'none';
-    }
-
-    function liftColor(color) {
-        return color instanceof Gradient ? color : colorTool.lift(color, -0.1);
-    }
-
     /**
      * @private
      */
-    function cacheElementStl(el) {
+    function doSingleEnterHover(el) {
+        if (el.__isHover) {
+            return;
+        }
         if (el.__hoverStlDirty) {
             var stroke = el.style.stroke;
             var fill = el.style.fill;
 
             // Create hoverStyle on mouseover
             var hoverStyle = el.__hoverStl;
+            var lift = colorTool.lift;
             hoverStyle.fill = hoverStyle.fill
-                || (hasFillOrStroke(fill) ? liftColor(fill) : null);
+                || (fill && (fill instanceof Gradient ? fill : lift(fill, -0.1)));
             hoverStyle.stroke = hoverStyle.stroke
-                || (hasFillOrStroke(stroke) ? liftColor(stroke) : null);
+                || (stroke && (stroke instanceof Gradient ? stroke : lift(stroke, -0.1)));
 
             var normalStyle = {};
             for (var name in hoverStyle) {
@@ -229,18 +223,6 @@ define(function(require) {
 
             el.__hoverStlDirty = false;
         }
-    }
-
-    /**
-     * @private
-     */
-    function doSingleEnterHover(el) {
-        if (el.__isHover) {
-            return;
-        }
-
-        cacheElementStl(el);
-
         el.setStyle(el.__hoverStl);
         el.z2 += 1;
 
@@ -293,10 +275,6 @@ define(function(require) {
         // Often used when item group has a label element and it's hoverStyle is different
         el.__hoverStl = el.hoverStyle || hoverStl || {};
         el.__hoverStlDirty = true;
-
-        if (el.__isHover) {
-            cacheElementStl(el);
-        }
     }
 
     /**
@@ -371,25 +349,15 @@ define(function(require) {
         });
     };
 
-    function animateOrSetProps(isUpdate, el, props, animatableModel, dataIndex, cb) {
-        if (typeof dataIndex === 'function') {
-            cb = dataIndex;
-            dataIndex = null;
-        }
-
+    function animateOrSetProps(isUpdate, el, props, animatableModel, cb) {
         var postfix = isUpdate ? 'Update' : '';
         var duration = animatableModel
             && animatableModel.getShallow('animationDuration' + postfix);
         var animationEasing = animatableModel
             && animatableModel.getShallow('animationEasing' + postfix);
-        var animationDelay = animatableModel
-            && animatableModel.getShallow('animationDelay' + postfix);
-        if (typeof animationDelay === 'function') {
-            animationDelay = animationDelay(dataIndex);
-        }
 
         animatableModel && animatableModel.getShallow('animation')
-            ? el.animateTo(props, duration, animationDelay || 0, animationEasing, cb)
+            ? el.animateTo(props, duration, animationEasing, cb)
             : (el.attr(props), cb && cb());
     }
     /**
@@ -397,16 +365,7 @@ define(function(require) {
      * @param {module:zrender/Element} el
      * @param {Object} props
      * @param {module:echarts/model/Model} [animatableModel]
-     * @param {number} [dataIndex]
-     * @param {Function} [cb]
-     * @example
-     *     graphic.updateProps(el, {
-     *         position: [100, 100]
-     *     }, seriesModel, dataIndex, function () { console.log('Animation done!'); });
-     *     // Or
-     *     graphic.updateProps(el, {
-     *         position: [100, 100]
-     *     }, seriesModel, function () { console.log('Animation done!'); });
+     * @param {Function} cb
      */
     graphic.updateProps = zrUtil.curry(animateOrSetProps, true);
 
@@ -424,7 +383,7 @@ define(function(require) {
      * in coordinate of its ancestor (param ancestor)
      *
      * @param {module:zrender/mixin/Transformable} target
-     * @param {module:zrender/mixin/Transformable} [ancestor]
+     * @param {module:zrender/mixin/Transformable} ancestor
      */
     graphic.getTransform = function (target, ancestor) {
         var mat = matrix.identity([]);

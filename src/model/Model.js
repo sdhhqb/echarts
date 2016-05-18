@@ -1,5 +1,6 @@
 /**
  * @module echarts/model/Model
+ * echarts基础model类型，很多其他model都是从这个model扩展出来的。
  */
 define(function (require) {
 
@@ -10,8 +11,8 @@ define(function (require) {
      * @alias module:echarts/model/Model
      * @constructor
      * @param {Object} option
-     * @param {module:echarts/model/Model} [parentModel]
-     * @param {module:echarts/model/Global} [ecModel]
+     * @param {module:echarts/model/Model} parentModel
+     * @param {module:echarts/model/Global} ecModel
      * @param {Object} extraOpt
      */
     function Model(option, parentModel, ecModel, extraOpt) {
@@ -78,10 +79,6 @@ define(function (require) {
             var obj = this.option;
             var parentModel = this.parentModel;
             for (var i = 0; i < path.length; i++) {
-                // Ignore empty
-                if (!path[i]) {
-                    continue;
-                }
                 // obj could be number/string/... (like 0)
                 obj = (obj && typeof obj === 'object') ? obj[path[i]] : null;
                 if (obj == null) {

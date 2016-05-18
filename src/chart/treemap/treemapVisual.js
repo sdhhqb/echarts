@@ -25,7 +25,7 @@ define(function (require) {
             });
 
             travelTree(
-                root, // Visual should calculate from tree root but not view root.
+                root,
                 {},
                 levelItemStyles,
                 seriesItemStyleModel,
@@ -43,7 +43,7 @@ define(function (require) {
         var nodeLayout = node.getLayout();
 
         // Optimize
-        if (!nodeLayout || nodeLayout.invisible || !nodeLayout.isInView) {
+        if (nodeLayout.invisible) {
             return;
         }
 

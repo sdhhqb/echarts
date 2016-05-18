@@ -122,12 +122,12 @@ define(function(require) {
 
             if (link) {
                 textEl.on('click', function () {
-                    window.open(link, '_' + titleModel.get('target'));
+                    window.open(link, titleModel.get('target'));
                 });
             }
             if (sublink) {
                 subTextEl.on('click', function () {
-                    window.open(sublink, '_' + titleModel.get('subtarget'));
+                    window.open(sublink, titleModel.get('subtarget'));
                 });
             }
 

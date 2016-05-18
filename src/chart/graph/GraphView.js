@@ -5,8 +5,8 @@ define(function (require) {
     var LineDraw = require('../helper/LineDraw');
     var RoamController = require('../../component/helper/RoamController');
 
+    var modelUtil = require('../../util/model');
     var graphic = require('../../util/graphic');
-    var adjustEdge = require('./adjustEdge');
 
     require('../../echarts').extendChartView({
 
@@ -32,43 +32,65 @@ define(function (require) {
         render: function (seriesModel, ecModel, api) {
             var coordSys = seriesModel.coordinateSystem;
             // Only support view and geo coordinate system
-            // if (coordSys.type !== 'geo' && coordSys.type !== 'view') {
-            //     return;
-            // }
+            if (coordSys.type !== 'geo' && coordSys.type !== 'view') {
+                return;
+            }
 
+            var data = seriesModel.getData();
             this._model = seriesModel;
-            this._nodeScaleRatio = seriesModel.get('nodeScaleRatio');
 
             var symbolDraw = this._symbolDraw;
             var lineDraw = this._lineDraw;
 
-            var group = this.group;
-
-            if (coordSys.type === 'view') {
-                var groupNewProp = {
-                    position: coordSys.position,
-                    scale: coordSys.scale
-                };
-                if (this._firstRender) {
-                    group.attr(groupNewProp);
-                }
-                else {
-                    graphic.updateProps(group, groupNewProp, seriesModel);
-                }
-            }
-            // Fix edge contact point with node
-            adjustEdge(seriesModel.getGraph(), this._getNodeGlobalScale(seriesModel));
-
-
-            var data = seriesModel.getData();
             symbolDraw.updateData(data);
 
-            var edgeData = seriesModel.getEdgeData();
-            lineDraw.updateData(edgeData);
+            var edgeData = data.graph.edgeData;
+            var rawOption = seriesModel.option;
+            var formatModel = modelUtil.createDataFormatModel(
+                seriesModel, edgeData, rawOption.edges || rawOption.links
+            );
+            formatModel.formatTooltip = function (dataIndex) {
+                var params = this.getDataParams(dataIndex);
+                var edge = data.graph.getEdgeByIndex(dataIndex);
+                var sourceName = data.getName(edge.node1.dataIndex);
+                var targetName = data.getName(edge.node2.dataIndex);
+                var html = sourceName + ' > ' + targetName;
+                if (params.value) {
+                    html += ' : ' + params.value;
+                }
+                return html;
+            };
+
+            lineDraw.updateData(edgeData, null, null);
+            edgeData.eachItemGraphicEl(function (el) {
+                el.traverse(function (child) {
+                    child.dataModel = formatModel;
+                });
+            });
+
+            // Save the original lineWidth
+            // data.graph.eachEdge(function (edge) {
+            //     edge.__lineWidth = edge.getModel('lineStyle.normal').get('width');
+            // });
+
+            var group = this.group;
+            var groupNewProp = {
+                position: coordSys.position,
+                scale: coordSys.scale
+            };
+            if (this._firstRender) {
+                group.attr(groupNewProp);
+            }
+            else {
+                graphic.updateProps(group, groupNewProp, seriesModel);
+            }
+
+            this._nodeScaleRatio = seriesModel.get('nodeScaleRatio');
+            // this._edgeScaleRatio = seriesModel.get('edgeScaleRatio');
 
             this._updateNodeAndLinkScale();
 
-            this._updateController(seriesModel, api);
+            this._updateController(seriesModel, coordSys, api);
 
             clearTimeout(this._layoutTimeout);
             var forceLayout = seriesModel.forceLayout;
@@ -79,26 +101,22 @@ define(function (require) {
             // Update draggable
             data.eachItemGraphicEl(function (el, idx) {
                 var draggable = data.getItemModel(idx).get('draggable');
-                if (draggable) {
+                if (draggable && forceLayout) {
                     el.on('drag', function () {
-                        if (forceLayout) {
-                            forceLayout.warmUp();
-                            !this._layouting
-                                && this._startForceLayoutIteration(forceLayout, layoutAnimation);
-                            forceLayout.setFixed(idx);
-                            // Write position back to layout
-                            data.setItemLayout(idx, el.position);
-                        }
+                        forceLayout.warmUp();
+                        !this._layouting
+                            && this._startForceLayoutIteration(forceLayout, layoutAnimation);
+                        forceLayout.setFixed(idx);
+                        // Write position back to layout
+                        data.setItemLayout(idx, el.position);
                     }, this).on('dragend', function () {
-                        if (forceLayout) {
-                            forceLayout.setUnfixed(idx);
-                        }
+                        forceLayout.setUnfixed(idx);
                     }, this);
                 }
                 else {
                     el.off('drag');
                 }
-                el.setDraggable(draggable && forceLayout);
+                el.setDraggable(draggable);
             }, this);
 
             this._firstRender = false;
@@ -108,7 +126,7 @@ define(function (require) {
             var self = this;
             (function step() {
                 forceLayout.step(function (stopped) {
-                    self.updateLayout(self._model);
+                    self.updateLayout();
                     (self._layouting = !stopped) && (
                         layoutAnimation
                             ? (self._layoutTimeout = setTimeout(step, 16))
@@ -118,22 +136,11 @@ define(function (require) {
             })();
         },
 
-        _updateController: function (seriesModel, api) {
+        _updateController: function (seriesModel, coordSys, api) {
             var controller = this._controller;
-            var group = this.group;
-            controller.rectProvider = function () {
-                var rect = group.getBoundingRect();
-                rect.applyTransform(group.transform);
-                return rect;
-            };
-            if (seriesModel.coordinateSystem.type !== 'view') {
-                controller.disable();
-                return;
-            }
+            controller.rect = coordSys.getViewRect();
+
             controller.enable(seriesModel.get('roam'));
-            controller.zoomLimit = seriesModel.get('scaleLimit');
-            // Update zoom from model
-            controller.zoom = seriesModel.coordinateSystem.getZoom();
 
             controller
                 .off('pan')
@@ -154,46 +161,44 @@ define(function (require) {
                         originX: mouseX,
                         originY: mouseY
                     });
-                    this._updateNodeAndLinkScale();
-                    adjustEdge(seriesModel.getGraph(), this._getNodeGlobalScale(seriesModel));
-                    this._lineDraw.updateLayout();
-                }, this);
+                })
+                .on('zoom', this._updateNodeAndLinkScale, this);
         },
 
         _updateNodeAndLinkScale: function () {
             var seriesModel = this._model;
             var data = seriesModel.getData();
 
-            var nodeScale = this._getNodeGlobalScale(seriesModel);
-            var invScale = [nodeScale, nodeScale];
+            var group = this.group;
+            var nodeScaleRatio = this._nodeScaleRatio;
+            // var edgeScaleRatio = this._edgeScaleRatio;
+
+            // Assume scale aspect is 1
+            var groupScale = group.scale[0];
+
+            var nodeScale = (groupScale - 1) * nodeScaleRatio + 1;
+            // var edgeScale = (groupScale - 1) * edgeScaleRatio + 1;
+            var invScale = [
+                nodeScale / groupScale,
+                nodeScale / groupScale
+            ];
 
             data.eachItemGraphicEl(function (el, idx) {
                 el.attr('scale', invScale);
             });
+            // data.graph.eachEdge(function (edge) {
+            //     var lineGroup = edge.getGraphicEl();
+            //     // FIXME
+            //     lineGroup.childOfName('line').setStyle(
+            //         'lineWidth',
+            //         edge.__lineWidth * edgeScale / groupScale
+            //     );
+            // });
         },
 
-        _getNodeGlobalScale: function (seriesModel) {
-            var coordSys = seriesModel.coordinateSystem;
-            if (coordSys.type !== 'view') {
-                return 1;
-            }
-
-            var nodeScaleRatio = this._nodeScaleRatio;
-
-            var groupScale = this.group.scale;
-            var groupZoom = (groupScale && groupScale[0]) || 1;
-            // Scale node when zoom changes
-            var roamZoom = coordSys.getZoom();
-            var nodeScale = (roamZoom - 1) * nodeScaleRatio + 1;
-
-            return nodeScale / groupZoom;
-        },
-
-        updateLayout: function (seriesModel) {
+        updateLayout: function (seriesModel, ecModel) {
             this._symbolDraw.updateLayout();
             this._lineDraw.updateLayout();
-
-            adjustEdge(seriesModel.getGraph(), this._getNodeGlobalScale(seriesModel));
         },
 
         remove: function (ecModel, api) {

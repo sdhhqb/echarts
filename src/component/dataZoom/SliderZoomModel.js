@@ -4,6 +4,8 @@
 define(function(require) {
 
     var DataZoomModel = require('./DataZoomModel');
+    var layout = require('../../util/layout');
+    var zrUtil = require('zrender/core/util');
 
     var SliderZoomModel = DataZoomModel.extend({
 

@@ -8,10 +8,6 @@ define(function (require) {
 
     return function (ecModel, api) {
         ecModel.eachSeriesByType('graph', function (graphSeries) {
-            var coordSys = graphSeries.coordinateSystem;
-            if (coordSys && coordSys.type !== 'view') {
-                return;
-            }
             if (graphSeries.get('layout') === 'force') {
                 var preservedPoints = graphSeries.preservedPoints || {};
                 var graph = graphSeries.getGraph();

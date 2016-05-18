@@ -74,7 +74,7 @@ define(function(require) {
             inverse: false,
             orient: 'vertical',        // 'horizontal' ¦ 'vertical'
 
-            seriesIndex: null,        // 所控制的series indices，默认所有有value的series.
+            seriesIndex: null,          // 所控制的series indices，默认所有有value的series.
             backgroundColor: 'rgba(0,0,0,0)',
             borderColor: '#ccc',       // 值域边框颜色
             contentColor: '#5793f3',
@@ -97,6 +97,11 @@ define(function(require) {
          * @protected
          */
         init: function (option, parentModel, ecModel) {
+            /**
+             * @private
+             * @type {boolean}
+             */
+            this._autoSeriesIndex = false;
 
             /**
              * @private
@@ -145,6 +150,8 @@ define(function(require) {
         doMergeOption: function (newOption, isInit) {
             var thisOption = this.option;
 
+            // Visual attributes merge is not supported, otherwise it
+            // brings overcomplicated merge logic. See #2853.
             !isInit && replaceVisualOption(thisOption, newOption);
 
             // FIXME
@@ -234,11 +241,12 @@ define(function(require) {
          */
         resetTargetSeries: function (newOption, isInit) {
             var thisOption = this.option;
-            var allSeriesIndex = thisOption.seriesIndex == null;
-            thisOption.seriesIndex = allSeriesIndex
+            var autoSeriesIndex = this._autoSeriesIndex =
+                (isInit ? thisOption : newOption).seriesIndex == null;
+            thisOption.seriesIndex = autoSeriesIndex
                 ? [] : modelUtil.normalizeToArray(thisOption.seriesIndex);
 
-            allSeriesIndex && this.ecModel.eachSeries(function (seriesModel, index) {
+            autoSeriesIndex && this.ecModel.eachSeries(function (seriesModel, index) {
                 var data = seriesModel.getData();
                 // FIXME
                 // 只考虑了list，还没有考虑map等。
@@ -294,12 +302,8 @@ define(function(require) {
 
             function doReset(baseAttr, visualMappings) {
                 each(this.stateList, function (state) {
-
-                    var mappings = visualMappings[state] || (
-                        visualMappings[state] = createMappings()
-                    );
+                    var mappings = visualMappings[state] || (visualMappings[state] = {});
                     var visaulOption = this.option[baseAttr][state] || {};
-
                     each(visaulOption, function (visualData, visualType) {
                         if (!VisualMapping.isValidType(visualType)) {
                             return;
@@ -311,25 +315,8 @@ define(function(require) {
                         };
                         fillVisualOption && fillVisualOption.call(this, mappingOption, state);
                         mappings[visualType] = new VisualMapping(mappingOption);
-
-                        // Prepare a alpha for opacity, for some case that opacity
-                        // is not supported, such as rendering using gradient color.
-                        if (baseAttr === 'controller' && visualType === 'opacity') {
-                            mappingOption = zrUtil.clone(mappingOption);
-                            mappingOption.type = 'colorAlpha';
-                            mappings.__hidden.__alphaForOpacity = new VisualMapping(mappingOption);
-                        }
                     }, this);
                 }, this);
-            }
-
-            function createMappings() {
-                var Creater = function () {};
-                // Make sure hidden fields will not be visited by
-                // object iteration (with hasOwnProperty checking).
-                Creater.prototype.__hidden = Creater.prototype;
-                var obj = new Creater();
-                return obj;
             }
         },
 
@@ -392,24 +379,9 @@ define(function(require) {
                 if (optExist && !optAbsent) {
                     optAbsent = base[stateAbsent] = {};
                     each(optExist, function (visualData, visualType) {
-                        if (!VisualMapping.isValidType(visualType)) {
-                            return;
-                        }
-
                         var defa = visualDefault.get(visualType, 'inactive', isCategory);
-
-                        if (defa != null) {
+                        if (VisualMapping.isValidType(visualType) && defa) {
                             optAbsent[visualType] = defa;
-
-                            // Compatibable with ec2:
-                            // Only inactive color to rgba(0,0,0,0) can not
-                            // make label transparent, so use opacity also.
-                            if (visualType === 'color'
-                                && !optAbsent.hasOwnProperty('opacity')
-                                && !optAbsent.hasOwnProperty('colorAlpha')
-                            ) {
-                                optAbsent.opacity = [0, 0];
-                            }
                         }
                     });
                 }
@@ -427,8 +399,7 @@ define(function(require) {
                     var itemSize = this.itemSize;
                     var visuals = controller[state];
 
-                    // Set inactive color for controller if no other color
-                    // attr (like colorAlpha) specified.
+                    // Set inactive color for controller if no other color attr (like colorAlpha) specified.
                     if (!visuals) {
                         visuals = controller[state] = {
                             color: isCategory ? inactiveColor : [inactiveColor]
@@ -436,12 +407,12 @@ define(function(require) {
                     }
 
                     // Consistent symbol and symbolSize if not specified.
-                    if (visuals.symbol == null) {
+                    if (!visuals.symbol) {
                         visuals.symbol = symbolExists
                             && zrUtil.clone(symbolExists)
                             || (isCategory ? 'roundRect' : ['roundRect']);
                     }
-                    if (visuals.symbolSize == null) {
+                    if (!visuals.symbolSize) {
                         visuals.symbolSize = symbolSizeExists
                             && zrUtil.clone(symbolSizeExists)
                             || (isCategory ? itemSize[0] : [itemSize[0], itemSize[0]]);
@@ -455,7 +426,7 @@ define(function(require) {
                     // Normalize symbolSize
                     var symbolSize = visuals.symbolSize;
 
-                    if (symbolSize != null) {
+                    if (symbolSize) {
                         var max = -Infinity;
                         // symbolSize can be object when categories defined.
                         eachVisual(symbolSize, function (value) {
@@ -510,28 +481,18 @@ define(function(require) {
 
     });
 
-    function replaceVisualOption(thisOption, newOption) {
-        // Visual attributes merge is not supported, otherwise it
-        // brings overcomplicated merge logic. See #2853. So if
-        // newOption has anyone of these keys, all of these keys
-        // will be reset. Otherwise, all keys remain.
-        var visualKeys = [
-            'inRange', 'outOfRange', 'target', 'controller', 'color'
-        ];
-        var has;
-        zrUtil.each(visualKeys, function (key) {
-            if (newOption.hasOwnProperty(key)) {
-                has = true;
+    function replaceVisualOption(targetOption, sourceOption) {
+        zrUtil.each(
+            ['inRange', 'outOfRange', 'target', 'controller', 'color'],
+            function (key) {
+                if (sourceOption.hasOwnProperty(key)) {
+                    targetOption[key] = zrUtil.clone(sourceOption[key]);
+                }
+                else {
+                    delete targetOption[key];
+                }
             }
-        });
-        has && zrUtil.each(visualKeys, function (key) {
-            if (newOption.hasOwnProperty(key)) {
-                thisOption[key] = zrUtil.clone(newOption[key]);
-            }
-            else {
-                delete thisOption[key];
-            }
-        });
+        );
     }
 
     return VisualMapModel;

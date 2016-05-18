@@ -25,6 +25,7 @@ define(function (require) {
 
     /**
      * @alias module:echarts/model/Global
+     * echarts全局model
      *
      * @param {Object} option
      * @param {module:echarts/model/Model} parentModel

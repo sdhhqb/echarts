@@ -6,13 +6,6 @@ define(function (require) {
     var graphic = require('../../util/graphic');
     var LineGroup = require('./Line');
 
-
-    function isPointNaN(pt) {
-        return isNaN(pt[0]) || isNaN(pt[1]);
-    }
-    function lineNeedsDraw(pts) {
-        return !isPointNaN(pts[0]) && !isPointNaN(pts[1]);
-    }
     /**
      * @alias module:echarts/component/marker/LineDraw
      * @constructor
@@ -26,8 +19,10 @@ define(function (require) {
 
     /**
      * @param {module:echarts/data/List} lineData
+     * @param {module:echarts/data/List} [fromData]
+     * @param {module:echarts/data/List} [toData]
      */
-    lineDrawProto.updateData = function (lineData) {
+    lineDrawProto.updateData = function (lineData, fromData, toData) {
 
         var oldLineData = this._lineData;
         var group = this.group;
@@ -35,10 +30,7 @@ define(function (require) {
 
         lineData.diff(oldLineData)
             .add(function (idx) {
-                if (!lineNeedsDraw(lineData.getItemLayout(idx))) {
-                    return;
-                }
-                var lineGroup = new LineCtor(lineData, idx);
+                var lineGroup = new LineCtor(lineData, fromData, toData, idx);
 
                 lineData.setItemGraphicEl(idx, lineGroup);
 
@@ -46,17 +38,7 @@ define(function (require) {
             })
             .update(function (newIdx, oldIdx) {
                 var lineGroup = oldLineData.getItemGraphicEl(oldIdx);
-                if (!lineNeedsDraw(lineData.getItemLayout(newIdx))) {
-                    group.remove(lineGroup);
-                    return;
-                }
-
-                if (!lineGroup) {
-                    lineGroup = new LineCtor(lineData, newIdx);
-                }
-                else {
-                    lineGroup.updateData(lineData, newIdx);
-                }
+                lineGroup.updateData(lineData, fromData, toData, newIdx);
 
                 lineData.setItemGraphicEl(newIdx, lineGroup);
 
@@ -68,12 +50,14 @@ define(function (require) {
             .execute();
 
         this._lineData = lineData;
+        this._fromData = fromData;
+        this._toData = toData;
     };
 
     lineDrawProto.updateLayout = function () {
         var lineData = this._lineData;
         lineData.eachItemGraphicEl(function (el, idx) {
-            el.updateLayout(lineData, idx);
+            el.updateLayout(lineData, this._fromData, this._toData, idx);
         }, this);
     };
 

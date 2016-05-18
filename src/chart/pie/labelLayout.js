@@ -1,4 +1,9 @@
 // FIXME emphasis label position is not same with normal label position
+// // 自定义position
+// right-angle 直角连线
+// circle-center 环形正中间
+// btn-center 带按钮的label
+
 define(function (require) {
 
     'use strict';
@@ -6,11 +11,20 @@ define(function (require) {
     var textContain = require('zrender/contain/text');
 
     function adjustSingleSide(list, cx, cy, r, dir, viewWidth, viewHeight) {
+        // 按y值从小到大排序
         list.sort(function (a, b) {
             return a.y - b.y;
         });
 
         // 压
+        /**
+         * 把list列表数组中各项往下调整
+         * @param  {[type]} start list开始调整位置
+         * @param  {[type]} end   list结束调整位置
+         * @param  {[type]} delta 调整大小
+         * @param  {[type]} dir   左右部分标志，1右边 -1左边
+         * @return {[type]}       [description]
+         */
         function shiftDown(start, end, delta, dir) {
             for (var j = start; j < end; j++) {
                 list[j].y += delta;
@@ -49,7 +63,10 @@ define(function (require) {
 
             for (var i = 0, l = list.length; i < l; i++) {
                 // Not change x for center label
-                if (list[i].position === 'center') {
+                if (list[i].position === 'center' 
+                    || list[i].position === 'circle-center' 
+                    || list[i].position === 'btn-center'
+                    || list[i].position === 'right-angle') {
                     continue;
                 }
                 var deltaY = Math.abs(list[i].y - cy);
@@ -114,10 +131,19 @@ define(function (require) {
             }
         }
 
+        // 会影响自定义label，circle-center, btn-center不处理，right-angle暂不处理
+        
         adjustSingleSide(rightList, cx, cy, r, 1, viewWidth, viewHeight);
         adjustSingleSide(leftList, cx, cy, r, -1, viewWidth, viewHeight);
 
+
         for (var i = 0; i < labelLayoutList.length; i++) {
+            if (labelLayoutList[0].position === 'center' 
+                || labelLayoutList[0].position === 'circle-center' 
+                || labelLayoutList[0].position === 'btn-center'
+                || labelLayoutList[0].position === 'right-angle') {
+                return ;
+            }
             var linePoints = labelLayoutList[i].linePoints;
             if (linePoints) {
                 var dist = linePoints[1][0] - linePoints[2][0];
@@ -148,6 +174,12 @@ define(function (require) {
             // Use position in normal or emphasis
             var labelPosition = labelModel.get('position') || itemModel.get('label.emphasis.position');
 
+            // 获取是否有label按钮，以及是否hover是才显示label按钮
+            var labelAddBtn = labelModel.get('addBtn') || false;
+            var labelAddBtnImg = labelModel.get('addBtnImg') || '';
+            var labelAddBtnHover = labelModel.get('addBtnHover') || false;
+            var labelAddBtnColor = labelModel.get('addBtnColor') || '';
+
             var labelLineModel = itemModel.getModel('labelLine.normal');
             var labelLineLen = labelLineModel.get('length');
             var labelLineLen2 = labelLineModel.get('length2');
@@ -170,9 +202,20 @@ define(function (require) {
                 textY = layout.cy;
                 textAlign = 'center';
             }
+            else if (labelPosition === 'circle-center' || labelPosition === 'btn-center') {
+                textX = layout.cx + (layout.r + layout.r0)/2*dx;
+                textY = layout.cy + (layout.r + layout.r0)/2*dy;
+                textAlign = 'center';
+            }
             else {
-                var x1 = (isLabelInside ? (layout.r + layout.r0) / 2 * dx : layout.r * dx) + cx;
-                var y1 = (isLabelInside ? (layout.r + layout.r0) / 2 * dy : layout.r * dy) + cy;
+                var x1 = (isLabelInside ? layout.r / 2 * dx : layout.r * dx) + cx;
+                var y1 = (isLabelInside ? layout.r / 2 * dy : layout.r * dy) + cy;
+
+                // 直角连线样式
+                if (labelPosition === 'right-angle') {
+                    x3 = x2 + dx * labelLineLen2;
+                    y3 = y2 + dy * labelLineLen2;
+                }
 
                 textX = x1 + dx * 3;
                 textY = y1 + dy * 3;
@@ -187,6 +230,17 @@ define(function (require) {
                     textX = x3 + (dx < 0 ? -5 : 5);
                     textY = y3;
                     linePoints = [[x1, y1], [x2, y2], [x3, y3]];
+
+                    // 直角连线样式
+                    if (labelPosition === 'right-angle') {
+                        // if (Math.abs(y1 - y2) < 10) {
+                        if (false) {
+                            linePoints = [[x1, y1], [x2, y1], [x3, y1], [x3, y1+10],[x3, y1-10], [x3, y1]];
+                            textY = y1;
+                        } else {
+                            linePoints = [[x1, y1], [x1, y3], [x3, y3], [x3, y3+10],[x3, y3-10], [x3, y3]];
+                        }
+                    }
                 }
 
                 textAlign = isLabelInside ? 'center' : (dx > 0 ? 'left' : 'right');
@@ -212,7 +266,12 @@ define(function (require) {
                 textAlign: textAlign,
                 verticalAlign: 'middle',
                 font: font,
-                rotation: labelRotate
+                rotation: labelRotate,
+                // label.layout新增字段
+                addBtn: labelAddBtn,
+                addBtnImg: labelAddBtnImg,
+                addBtnHover: labelAddBtnHover,
+                addBtnColor: labelAddBtnColor
             };
 
             // Not layout the inside label

@@ -15,10 +15,10 @@ define(function (require) {
      * @extends {module:zrender/graphic/Group}
      * @alias {module:echarts/chart/helper/Line}
      */
-    function EffectLine(lineData, idx) {
+    function EffectLine(lineData, fromData, toData, idx) {
         graphic.Group.call(this);
 
-        var line = new Line(lineData, idx);
+        var line = new Line(lineData, fromData, toData, idx);
         this.add(line);
 
         this._updateEffectSymbol(lineData, idx);
@@ -98,13 +98,13 @@ define(function (require) {
         symbol.attr('scale', size);
     };
 
-    effectLineProto.updateData = function (lineData, idx) {
-        this.childAt(0).updateData(lineData, idx);
+    effectLineProto.updateData = function (lineData, fromData, toData, idx) {
+        this.childAt(0).updateData(lineData, fromData, toData, idx);
         this._updateEffectSymbol(lineData, idx);
     };
 
-    effectLineProto.updateLayout = function (lineData, idx) {
-        this.childAt(0).updateLayout(lineData, idx);
+    effectLineProto.updateLayout = function (lineData, fromData, toData, idx) {
+        this.childAt(0).updateLayout(lineData, fromData, toData, idx);
         var symbol = this.childAt(1);
         var points = lineData.getItemLayout(idx);
         setAnimationPoints(symbol, points);

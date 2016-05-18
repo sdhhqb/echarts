@@ -51,11 +51,9 @@ define(function(require) {
              */
             this._dataBeforeProcessed = this.getInitialData(option, ecModel);
 
-            // If we reverse the order (make this._data firstly, and then make
-            // this._dataBeforeProcessed by cloneShallow), cloneShallow will
-            // cause this._data.graph.data !== this._data when using
-            // module:echarts/data/Graph or module:echarts/data/Tree.
-            // See module:echarts/data/helper/linkList
+            // When using module:echarts/data/Tree or module:echarts/data/Graph,
+            // cloneShallow will cause this._data.graph.data pointing to new data list.
+            // Wo we make this._dataBeforeProcessed first, and then make this._data.
             this._data = this._dataBeforeProcessed.cloneShallow();
         },
 
@@ -72,34 +70,30 @@ define(function(require) {
             zrUtil.merge(option, this.getDefaultOption());
 
             // Default label emphasis `position` and `show`
-            // FIXME Set label in mergeOption
-            modelUtil.defaultEmphasis(option.label, modelUtil.LABEL_OPTIONS);
+            modelUtil.defaultEmphasis(
+                option.label, ['position', 'show', 'textStyle', 'distance', 'formatter']
+            );
 
-            this.fillDataTextStyle(option.data);
+            // Default data label emphasis `position` and `show`
+            // FIXME Tree structure data ?
+            var data = option.data || [];
+            for (var i = 0; i < data.length; i++) {
+                if (data[i] && data[i].label) {
+                    modelUtil.defaultEmphasis(
+                        data[i].label, ['position', 'show', 'textStyle', 'distance', 'formatter']
+                    );
+                }
+            }
         },
 
         mergeOption: function (newSeriesOption, ecModel) {
             newSeriesOption = zrUtil.merge(this.option, newSeriesOption, true);
-            this.fillDataTextStyle(newSeriesOption.data);
 
             var data = this.getInitialData(newSeriesOption, ecModel);
             // TODO Merge data?
             if (data) {
                 this._data = data;
                 this._dataBeforeProcessed = data.cloneShallow();
-            }
-        },
-
-        fillDataTextStyle: function (data) {
-            // Default data label emphasis `position` and `show`
-            // FIXME Tree structure data ?
-            // FIXME Performance ?
-            if (data) {
-                for (var i = 0; i < data.length; i++) {
-                    if (data[i] && data[i].label) {
-                        modelUtil.defaultEmphasis(data[i].label, modelUtil.LABEL_OPTIONS);
-                    }
-                }
             }
         },
 
@@ -110,11 +104,10 @@ define(function(require) {
         getInitialData: function () {},
 
         /**
-         * @param {string} [dataType]
          * @return {module:echarts/data/List}
          */
-        getData: function (dataType) {
-            return dataType == null ? this._data : this._data.getLinkedData(dataType);
+        getData: function () {
+            return this._data;
         },
 
         /**
@@ -133,10 +126,18 @@ define(function(require) {
         },
 
         /**
+         * Get raw data array given by user
+         * @return {Array.<Object>}
+         */
+        getRawDataArray: function () {
+            return this.option.data;
+        },
+
+        /**
          * Coord dimension to data dimension.
          *
          * By default the result is the same as dimensions of series data.
-         * But in some series data dimensions are different from coord dimensions (i.e.
+         * But some series dimensions are different from coord dimensions (i.e.
          * candlestick and boxplot). Override this method to handle those cases.
          *
          * Coord dimension to data dimension can be one-to-many
@@ -175,9 +176,8 @@ define(function(require) {
          *
          * @param {number} dataIndex
          * @param {boolean} [multipleSeries=false]
-         * @param {number} [dataType]
          */
-        formatTooltip: function (dataIndex, multipleSeries, dataType) {
+        formatTooltip: function (dataIndex, multipleSeries) {
             var data = this._data;
             var value = this.getRawValue(dataIndex);
             var formattedValue = zrUtil.isArray(value)
@@ -187,14 +187,8 @@ define(function(require) {
             var colorEl = '<span style="display:inline-block;margin-right:5px;'
                 + 'border-radius:10px;width:9px;height:9px;background-color:' + color + '"></span>';
 
-            var seriesName = this.name;
-            // FIXME
-            if (seriesName === '\0-') {
-                // Not show '-'
-                seriesName = '';
-            }
             return !multipleSeries
-                ? ((seriesName && encodeHTML(seriesName) + '<br />') + colorEl
+                ? (encodeHTML(this.name) + '<br />' + colorEl
                     + (name
                         ? encodeHTML(name) + ' : ' + formattedValue
                         : formattedValue)
@@ -204,9 +198,7 @@ define(function(require) {
 
         restoreData: function () {
             this._data = this._dataBeforeProcessed.cloneShallow();
-        },
-
-        getAxisTooltipDataIndex: null
+        }
     });
 
     zrUtil.mixin(SeriesModel, modelUtil.dataFormatMixin);

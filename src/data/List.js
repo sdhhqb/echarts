@@ -31,14 +31,12 @@ define(function (require) {
         'stackedOn', '_nameList', '_idList', '_rawData'
     ];
 
-    var transferImmuProperties = function (a, b) {
-        zrUtil.each(IMMUTABLE_PROPERTIES.concat(b.__wrappedMethods || []), function (propName) {
+    var transferImmuProperties = function (a, b, wrappedMethod) {
+        zrUtil.each(IMMUTABLE_PROPERTIES.concat(wrappedMethod || []), function (propName) {
             if (b.hasOwnProperty(propName)) {
                 a[propName] = b[propName];
             }
         });
-
-        a.__wrappedMethods = b.__wrappedMethods;
     };
 
     /**
@@ -92,11 +90,6 @@ define(function (require) {
          * @type {module:echarts/model/Model}
          */
         this.hostModel = hostModel;
-
-        /**
-         * @type {module:echarts/model/Model}
-         */
-        this.dataType;
 
         /**
          * Indices stores the indices of data subset after filtered.
@@ -190,7 +183,6 @@ define(function (require) {
      * @param {string|number} dim
      *        Dimension can be concrete names like x, y, z, lng, lat, angle, radius
      *        Or a ordinal number. For example getDimensionInfo(0) will return 'x' or 'lng' or 'radius'
-     * @return {string} Concrete dim name.
      */
     listProto.getDimension = function (dim) {
         if (!isNaN(dim)) {
@@ -216,10 +208,6 @@ define(function (require) {
      */
     listProto.initData = function (data, nameList, dimValueGetter) {
         data = data || [];
-
-        if (!zrUtil.isArray(data)) {
-            throw new Error('Invalid data.');
-        }
 
         this._rawData = data;
 
@@ -413,6 +401,7 @@ define(function (require) {
                 // FIXME
                 // if (isOrdinal && typeof value === 'string') {
                 //     value = zrUtil.indexOf(dimData, value);
+                //     console.log(value);
                 // }
                 value < min && (min = value);
                 value > max && (max = value);
@@ -488,7 +477,7 @@ define(function (require) {
 
     /**
      * Retreive the index of nearest value
-     * @param {string} dim
+     * @param {string>} dim
      * @param {number} value
      * @param {boolean} stack If given value is after stacked
      * @return {number}
@@ -526,15 +515,6 @@ define(function (require) {
     listProto.getRawIndex = function (idx) {
         var rawIdx = this.indices[idx];
         return rawIdx == null ? -1 : rawIdx;
-    };
-
-    /**
-     * Get raw data item
-     * @param {number} idx
-     * @return {number}
-     */
-    listProto.getRawDataItem = function (idx) {
-        return this._rawData[this.getRawIndex(idx)];
     };
 
     /**
@@ -696,7 +676,7 @@ define(function (require) {
             original.hostModel
         );
         // FIXME If needs stackedOn, value may already been stacked
-        transferImmuProperties(list, original);
+        transferImmuProperties(list, original, original._wrappedMethods);
 
         var storage = list._storage = {};
         var originalStorage = original._storage;
@@ -803,7 +783,6 @@ define(function (require) {
             dimStore[idx] = value;
             indices.push(idx);
         }
-
         return list;
     };
 
@@ -816,7 +795,7 @@ define(function (require) {
     listProto.getItemModel = function (idx) {
         var hostModel = this.hostModel;
         idx = this.indices[idx];
-        return new Model(this._rawData[idx], hostModel, hostModel && hostModel.ecModel);
+        return new Model(this._rawData[idx], hostModel, hostModel.ecModel);
     };
 
     /**
@@ -900,7 +879,7 @@ define(function (require) {
      */
     listProto.getItemLayout = function (idx) {
         return this._itemLayouts[idx];
-    };
+    },
 
     /**
      * Set layout of single data item
@@ -912,14 +891,7 @@ define(function (require) {
         this._itemLayouts[idx] = merge
             ? zrUtil.extend(this._itemLayouts[idx] || {}, layout)
             : layout;
-    };
-
-    /**
-     * Clear all layout of single data item
-     */
-    listProto.clearItemLayouts = function () {
-        this._itemLayouts.length = 0;
-    };
+    },
 
     /**
      * Get visual property of single data item
@@ -935,7 +907,7 @@ define(function (require) {
             return this.getVisual(key);
         }
         return val;
-    };
+    },
 
     /**
      * Set visual property of single data item
@@ -968,7 +940,6 @@ define(function (require) {
     var setItemDataAndSeriesIndex = function (child) {
         child.seriesIndex = this.seriesIndex;
         child.dataIndex = this.dataIndex;
-        child.dataType = this.dataType;
     };
     /**
      * Set graphic element relative to data. It can be set as null
@@ -982,7 +953,6 @@ define(function (require) {
             // Add data index and series index for indexing the data by element
             // Useful in tooltip
             el.dataIndex = idx;
-            el.dataType = this.dataType;
             el.seriesIndex = hostModel && hostModel.seriesIndex;
             if (el.type === 'group') {
                 el.traverse(setItemDataAndSeriesIndex, el);
@@ -1023,7 +993,7 @@ define(function (require) {
         // FIXME
         list._storage = this._storage;
 
-        transferImmuProperties(list, this);
+        transferImmuProperties(list, this, this._wrappedMethods);
 
         list.indices = this.indices.slice();
 
@@ -1040,19 +1010,13 @@ define(function (require) {
         if (typeof originalMethod !== 'function') {
             return;
         }
-        this.__wrappedMethods = this.__wrappedMethods || [];
-        this.__wrappedMethods.push(methodName);
+        this._wrappedMethods = this._wrappedMethods || [];
+        this._wrappedMethods.push(methodName);
         this[methodName] = function () {
             var res = originalMethod.apply(this, arguments);
-            return injectFunction.apply(this, [res].concat(zrUtil.slice(arguments)));
+            return injectFunction.call(this, res);
         };
     };
-
-    // Methods that create a new list based on this list should be listed here.
-    // Notice that those method should `RETURN` the new list.
-    listProto.TRANSFERABLE_METHODS = ['cloneShallow', 'downSample', 'map'];
-    // Methods that change indices of this list should be listed here.
-    listProto.CHANGABLE_METHODS = ['filterSelf'];
 
     return List;
 });

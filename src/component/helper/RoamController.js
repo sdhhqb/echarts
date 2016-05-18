@@ -16,7 +16,7 @@ define(function (require) {
 
         var x = e.offsetX;
         var y = e.offsetY;
-        var rect = this.rectProvider && this.rectProvider();
+        var rect = this.rect;
         if (rect && rect.contain(x, y)) {
             this._x = x;
             this._y = y;
@@ -65,6 +65,7 @@ define(function (require) {
     }
 
     function mousewheel(e) {
+        eventTool.stop(e.event);
         // Convenience:
         // Mac and VM Windows on Mac: scroll up: zoom out.
         // Windows: scroll up: zoom in.
@@ -77,18 +78,15 @@ define(function (require) {
             return;
         }
 
+        eventTool.stop(e.event);
         var zoomDelta = e.pinchScale > 1 ? 1.1 : 1 / 1.1;
         zoom.call(this, e, zoomDelta, e.pinchX, e.pinchY);
     }
 
     function zoom(e, zoomDelta, zoomX, zoomY) {
-        var rect = this.rectProvider && this.rectProvider();
+        var rect = this.rect;
 
         if (rect && rect.contain(zoomX, zoomY)) {
-            // When mouse is out of roamController rect,
-            // default befavoius should be be disabled, otherwise
-            // page sliding is disabled, contrary to expectation.
-            eventTool.stop(e.event);
 
             var target = this.target;
             var zoomLimit = this.zoomLimit;
@@ -100,11 +98,9 @@ define(function (require) {
                 var newZoom = this.zoom = this.zoom || 1;
                 newZoom *= zoomDelta;
                 if (zoomLimit) {
-                    var zoomMin = zoomLimit.min || 0;
-                    var zoomMax = zoomLimit.max || Infinity;
                     newZoom = Math.max(
-                        Math.min(zoomMax, newZoom),
-                        zoomMin
+                        Math.min(zoomLimit.max, newZoom),
+                        zoomLimit.min
                     );
                 }
                 var zoomScale = newZoom / this.zoom;
@@ -129,9 +125,9 @@ define(function (require) {
      *
      * @param {module:zrender/zrender~ZRender} zr
      * @param {module:zrender/Element} target
-     * @param {Function} rectProvider
+     * @param {module:zrender/core/BoundingRect} rect
      */
-    function RoamController(zr, target, rectProvider) {
+    function RoamController(zr, target, rect) {
 
         /**
          * @type {module:zrender/Element}
@@ -139,9 +135,9 @@ define(function (require) {
         this.target = target;
 
         /**
-         * @type {Function}
+         * @type {module:zrender/core/BoundingRect}
          */
-        this.rectProvider = rectProvider;
+        this.rect = rect;
 
         /**
          * { min: 1, max: 2 }

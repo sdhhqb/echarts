@@ -2,7 +2,7 @@ define(function (require) {
 
     var zrUtil = require('zrender/core/util');
     var geoProps = [
-        'x', 'y', 'x2', 'y2', 'width', 'height', 'map', 'roam', 'center', 'zoom', 'scaleLimit', 'label', 'itemStyle'
+        'x', 'y', 'x2', 'y2', 'width', 'height', 'map', 'roam', 'roamDetail', 'label', 'itemStyle'
     ];
 
     var geoCoordsMap = {};
@@ -60,9 +60,6 @@ define(function (require) {
                 if (!(seriesOpt.data && seriesOpt.data.length)) {
                     if (!option.geo) {
                         option.geo = [];
-                    }
-                    else if (!zrUtil.isArray(option.geo)) {
-                        option.geo = [option.geo];
                     }
 
                     // Use same geo if multiple map series has same map type

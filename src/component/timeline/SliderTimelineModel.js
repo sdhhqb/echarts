@@ -4,10 +4,8 @@
 define(function(require) {
 
     var TimelineModel = require('./TimelineModel');
-    var zrUtil = require('zrender/core/util');
-    var modelUtil = require('../../util/model');
 
-    var SliderTimelineModel = TimelineModel.extend({
+    return TimelineModel.extend({
 
         type: 'timeline.slider',
 
@@ -105,7 +103,4 @@ define(function(require) {
 
     });
 
-    zrUtil.mixin(SliderTimelineModel, modelUtil.dataFormatMixin);
-
-    return SliderTimelineModel;
 });

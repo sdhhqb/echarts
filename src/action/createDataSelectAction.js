@@ -27,7 +27,8 @@ define(function (require) {
                 );
                 return {
                     name: payload.name,
-                    selected: selected
+                    selected: selected,
+                    extra: payload.extra
                 };
             });
         });

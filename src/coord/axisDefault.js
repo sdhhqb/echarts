@@ -16,8 +16,6 @@ define(function (require) {
         nameTextStyle: {},
         // 文字与轴线距离
         nameGap: 15,
-        // 是否能触发鼠标事件
-        silent: true,
         // 坐标轴线
         axisLine: {
             // 默认显示，属性show控制显示与否
@@ -108,8 +106,6 @@ define(function (require) {
         // scale: false,
         // 分割段数，默认为5
         splitNumber: 5
-        // Minimum interval
-        // minInterval: null
     }, defaultOption);
 
     // FIXME

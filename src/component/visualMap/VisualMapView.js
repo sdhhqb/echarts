@@ -84,28 +84,30 @@ define(function (require) {
 
         /**
          * @protected
-         * @param {number} targetValue
-         * @param {string=} visualCluster Only can be 'color' 'opacity' 'symbol' 'symbolSize'
-         * @param {Object} [opts]
-         * @param {string=} [opts.forceState] Specify state, instead of using getValueState method.
-         * @param {string=} [opts.convertOpacityToAlpha=false] For color gradient in controller widget.
-         * @return {*} Visual value.
+         * @param {(number|Array)} targetValue
+         * @param {string=} forceState Specify state, instead of using getValueState method.
+         * @param {string=} visualCluster Specify visual type, defualt all available visualClusters.
          */
-        getControllerVisual: function (targetValue, visualCluster, opts) {
-            opts = opts || {};
-
-            var forceState = opts.forceState;
+        getControllerVisual: function (targetValue, forceState, visualCluster) {
             var visualMapModel = this.visualMapModel;
-            var visualObj = {};
+            var targetIsArray = zrUtil.isArray(targetValue);
 
-            // Default values.
-            if (visualCluster === 'symbol') {
-                visualObj.symbol = visualMapModel.get('itemSymbol');
+            // targetValue is array when caculate gradient color,
+            // where forceState is required.
+            if (targetIsArray && (!forceState || visualCluster !== 'color')) {
+                throw new Error(targetValue);
             }
-            if (visualCluster === 'color') {
-                var defaultColor = visualMapModel.get('contentColor');
-                visualObj.color = defaultColor;
-            }
+
+            var mappings = visualMapModel.controllerVisuals[
+                forceState || visualMapModel.getValueState(targetValue)
+            ];
+            var defaultColor = visualMapModel.get('contentColor');
+            var visualObj = {
+                symbol: visualMapModel.get('itemSymbol'),
+                color: targetIsArray
+                    ? [{color: defaultColor, offset: 0}, {color: defaultColor, offset: 1}]
+                    : defaultColor
+            };
 
             function getter(key) {
                 return visualObj[key];
@@ -115,25 +117,16 @@ define(function (require) {
                 visualObj[key] = value;
             }
 
-            var mappings = visualMapModel.controllerVisuals[
-                forceState || visualMapModel.getValueState(targetValue)
-            ];
             var visualTypes = VisualMapping.prepareVisualTypes(mappings);
 
             zrUtil.each(visualTypes, function (type) {
                 var visualMapping = mappings[type];
-                if (opts.convertOpacityToAlpha && type === 'opacity') {
-                    type = 'colorAlpha';
-                    visualMapping = mappings.__alphaForOpacity;
-                }
-                if (VisualMapping.dependsOn(type, visualCluster)) {
-                    visualMapping && visualMapping.applyVisual(
-                        targetValue, getter, setter
-                    );
+                if (!visualCluster || VisualMapping.isInVisualCluster(type, visualCluster)) {
+                    visualMapping && visualMapping.applyVisual(targetValue, getter, setter);
                 }
             });
 
-            return visualObj[visualCluster];
+            return visualObj;
         },
 
         /**
@@ -157,5 +150,4 @@ define(function (require) {
         doRender: zrUtil.noop
 
     });
-
 });

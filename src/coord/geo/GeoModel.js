@@ -43,10 +43,12 @@ define(function (require) {
             // Map type
             map: '',
 
-            // Default on center of map
-            center: null,
-
-            zoom: 1,
+            // 在 roam 开启的时候使用
+            roamDetail: {
+                x: 0,
+                y: 0,
+                zoom: 1
+            },
 
             scaleLimit: null,
 
@@ -98,12 +100,17 @@ define(function (require) {
             }
         },
 
-        setZoom: function (zoom) {
-            this.option.zoom = zoom;
+        setRoamZoom: function (zoom) {
+            var roamDetail = this.option.roamDetail;
+            roamDetail && (roamDetail.zoom = zoom);
         },
 
-        setCenter: function (center) {
-            this.option.center = center;
+        setRoamPan: function (x, y) {
+            var roamDetail = this.option.roamDetail;
+            if (roamDetail) {
+                roamDetail.x = x;
+                roamDetail.y = y;
+            }
         }
     });
 });

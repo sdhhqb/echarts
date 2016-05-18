@@ -19,18 +19,26 @@ define(function (require) {
         return ret;
     };
     /**
+     * 使一个class可以被扩展
      * @public
      */
     clazz.enableClassExtend = function (RootClass, preConstruct) {
+        // 为RootClass添加extend方法，参数为一个包含新增属性的对象
         RootClass.extend = function (proto) {
+
+            // 扩展后的class
             var ExtendedClass = function () {
+                // 预构造函数
+                // 执行RootClass的构造函数
                 preConstruct && preConstruct.apply(this, arguments);
                 RootClass.apply(this, arguments);
             };
-
+            // 用传入的原型对象，扩展ExtendedClass的原型
             zrUtil.extend(ExtendedClass.prototype, proto);
 
+            // 为扩展后的class添加extend方法，使其可以继续扩展
             ExtendedClass.extend = this.extend;
+
             ExtendedClass.superCall = superCall;
             ExtendedClass.superApply = superApply;
             zrUtil.inherits(ExtendedClass, this);
@@ -56,6 +64,7 @@ define(function (require) {
     }
 
     /**
+     * 为一个class添加管理子class的功能,当option中传了registerWhenExtend时，扩展class时会自动注册扩展后的class。
      * @param {Object} entity
      * @param {Object} options
      * @param {boolean} [options.registerWhenExtend]
@@ -74,10 +83,12 @@ define(function (require) {
          */
         var storage = {};
 
+        // 注册class，保存在storage中
         entity.registerClass = function (Clazz, componentType) {
             if (componentType) {
                 componentType = parseClassType(componentType);
 
+                // 如果Clazz没有子类型，且storage中没有注册此种类型的class，保存class到storage中。
                 if (!componentType.sub) {
                     if (storage[componentType.main]) {
                         throw new Error(componentType.main + 'exists.');
@@ -92,6 +103,7 @@ define(function (require) {
             return Clazz;
         };
 
+        // 获取已注册的class
         entity.getClass = function (componentTypeMain, subType, throwWhenNotFound) {
             var Clazz = storage[componentTypeMain];
 
@@ -165,6 +177,7 @@ define(function (require) {
             return container;
         }
 
+        // 扩展classs是自动注册class
         if (options.registerWhenExtend) {
             var originalExtend = entity.extend;
             if (originalExtend) {

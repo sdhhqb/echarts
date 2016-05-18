@@ -115,8 +115,7 @@ define(function (require) {
                         height: height
                     },
                     style: {
-                        fill: data.getItemVisual(idx, 'color'),
-                        opacity: data.getItemVisual(idx, 'opacity')
+                        fill: data.getItemVisual(idx, 'color')
                     }
                 });
                 var style = itemModel.getModel('itemStyle.normal').getItemStyle(['color']);
@@ -162,7 +161,7 @@ define(function (require) {
             hmLayer.maxOpacity = seriesModel.get('maxOpacity');
 
             var rect = geo.getViewRect().clone();
-            var roamTransform = geo.getRoamTransform().transform;
+            var roamTransform = geo.getRoamTransform();
             rect.applyTransform(roamTransform);
 
             // Clamp on viewport

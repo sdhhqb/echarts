@@ -36,13 +36,15 @@ define(function(require) {
         );
 
         var whiskerEl = itemGroup.childAt(itemGroup.whiskerIndex);
-        whiskerEl.useStyle(itemStyle);
+        whiskerEl.style.set(itemStyle);
         whiskerEl.style.stroke = borderColor;
+        whiskerEl.dirty();
 
         var bodyEl = itemGroup.childAt(itemGroup.bodyIndex);
-        bodyEl.useStyle(itemStyle);
+        bodyEl.style.set(itemStyle);
         bodyEl.style.fill = color;
         bodyEl.style.stroke = borderColor;
+        bodyEl.dirty();
 
         var hoverStyle = itemModel.getModel(emphasisStyleAccessPath).getItemStyle();
         graphic.setHoverStyle(itemGroup, hoverStyle);

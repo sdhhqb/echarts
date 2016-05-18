@@ -32,20 +32,12 @@ define(function (require) {
 
                 bbox.fromPoints(positions, min, max);
 
-                // If width or height is 0
-                if (max[0] - min[0] === 0) {
-                    max[0] += 1;
-                    min[0] -= 1;
-                }
-                if (max[1] - min[1] === 0) {
-                    max[1] += 1;
-                    min[1] -= 1;
-                }
-                var aspect = (max[0] - min[0]) / (max[1] - min[1]);
                 // FIXME If get view rect after data processed?
-                var viewRect = getViewRect(seriesModel, api, aspect);
+                var viewRect = getViewRect(
+                    seriesModel, api, (max[0] - min[0]) / (max[1] - min[1]) || 1
+                );
                 // Position may be NaN, use view rect instead
-                if (isNaN(aspect)) {
+                if (isNaN(min[0]) || isNaN(min[1])) {
                     min = [viewRect.x, viewRect.y];
                     max = [viewRect.x + viewRect.width, viewRect.y + viewRect.height];
                 }
@@ -57,7 +49,6 @@ define(function (require) {
                 var viewHeight = viewRect.height;
 
                 viewCoordSys = seriesModel.coordinateSystem = new View();
-                viewCoordSys.zoomLimit = seriesModel.get('scaleLimit');
 
                 viewCoordSys.setBoundingRect(
                     min[0], min[1], bbWidth, bbHeight
@@ -67,8 +58,9 @@ define(function (require) {
                 );
 
                 // Update roam info
-                viewCoordSys.setCenter(seriesModel.get('center'));
-                viewCoordSys.setZoom(seriesModel.get('zoom'));
+                var roamDetailModel = seriesModel.getModel('roamDetail');
+                viewCoordSys.setPan(roamDetailModel.get('x') || 0, roamDetailModel.get('y') || 0);
+                viewCoordSys.setZoom(roamDetailModel.get('zoom') || 1);
             }
         });
         return viewList;

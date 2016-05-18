@@ -51,7 +51,7 @@ define(function (require) {
                             graphic[isInit ? 'initProps' : 'updateProps'](
                                 symbolPath, {
                                     position: newPoints[i]
-                                }, seriesModel, idx
+                                }, seriesModel
                             );
                         }
                         else {
@@ -82,8 +82,8 @@ define(function (require) {
                     };
                     polygon.shape.points = getInitialPoints(points);
                     polyline.shape.points = getInitialPoints(points);
-                    graphic.initProps(polygon, target, seriesModel, idx);
-                    graphic.initProps(polyline, target, seriesModel, idx);
+                    graphic.initProps(polygon, target, seriesModel);
+                    graphic.initProps(polyline, target, seriesModel);
 
                     var itemGroup = new graphic.Group();
                     var symbolGroup = new graphic.Group();
@@ -133,11 +133,10 @@ define(function (require) {
 
                 group.add(itemGroup);
 
-                polyline.useStyle(
+                polyline.setStyle(
                     zrUtil.extend(
                         itemModel.getModel('lineStyle.normal').getLineStyle(),
                         {
-                            fill: 'none',
                             stroke: color
                         }
                     )
@@ -152,7 +151,7 @@ define(function (require) {
                 hoverPolygonIgnore = hoverPolygonIgnore && polygonIgnore;
                 polygon.ignore = polygonIgnore;
 
-                polygon.useStyle(
+                polygon.setStyle(
                     zrUtil.defaults(
                         areaStyleModel.getAreaStyle(),
                         {

@@ -33,11 +33,6 @@ define(function () {
                 frame[i] < min && (min = frame[i]);
             }
             return min;
-        },
-        // TODO
-        // Median
-        nearest: function (frame) {
-            return frame[0];
         }
     };
 

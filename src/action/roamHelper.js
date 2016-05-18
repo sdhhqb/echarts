@@ -3,56 +3,45 @@ define(function (require) {
     var roamHelper = {};
 
     /**
-     * @param {module:echarts/coord/View} view
+     * Calculate pan and zoom which from roamDetail model
+     * @param {module:echarts/model/Model} roamDetailModel
      * @param {Object} payload
      * @param {Object} [zoomLimit]
      */
-    roamHelper.updateCenterAndZoom = function (
-        view, payload, zoomLimit
+    roamHelper.calcPanAndZoom = function (
+        roamDetailModel, payload, zoomLimit
     ) {
-        var previousZoom = view.getZoom();
-        var center = view.getCenter();
+        var dx = payload.dx;
+        var dy = payload.dy;
         var zoom = payload.zoom;
 
-        var point = view.dataToPoint(center);
+        var panX = roamDetailModel.get('x') || 0;
+        var panY = roamDetailModel.get('y') || 0;
 
-        if (payload.dx != null && payload.dy != null) {
-            point[0] -= payload.dx;
-            point[1] -= payload.dy;
+        var previousZoom = roamDetailModel.get('zoom') || 1;
 
-            var center = view.pointToData(point);
-            view.setCenter(center);
+        if (dx != null && dy != null) {
+            panX += dx;
+            panY += dy;
         }
         if (zoom != null) {
             if (zoomLimit) {
-                var zoomMin = zoomLimit.min || 0;
-                var zoomMax = zoomLimit.max || Infinity;
                 zoom = Math.max(
-                    Math.min(previousZoom * zoom, zoomMax),
-                    zoomMin
+                    Math.min(previousZoom * zoom, zoomLimit.max),
+                    zoomLimit.min
                 ) / previousZoom;
             }
+            var fixX = (payload.originX - panX) * (zoom - 1);
+            var fixY = (payload.originY - panY) * (zoom - 1);
 
-            // Zoom on given point(originX, originY)
-            view.scale[0] *= zoom;
-            view.scale[1] *= zoom;
-            var position = view.position;
-            var fixX = (payload.originX - position[0]) * (zoom - 1);
-            var fixY = (payload.originY - position[1]) * (zoom - 1);
-
-            position[0] -= fixX;
-            position[1] -= fixY;
-
-            view.updateTransform();
-            // Get the new center
-            var center = view.pointToData(point);
-            view.setCenter(center);
-            view.setZoom(zoom * previousZoom);
+            panX -= fixX;
+            panY -= fixY;
         }
 
         return {
-            center: view.getCenter(),
-            zoom: view.getZoom()
+            x: panX,
+            y: panY,
+            zoom: (zoom || 1) * previousZoom
         };
     };
 

@@ -62,10 +62,7 @@ define(function(require) {
             }
 
             // Consider resize, area should be always updated.
-            var rect = dataZoomInfo.coordinateSystem.getRect().clone();
-            record.controller.rectProvider = function () {
-                return rect;
-            };
+            record.controller.rect = dataZoomInfo.coordinateSystem.getRect().clone();
 
             // Update throttle.
             throttle.createOrUpdate(

@@ -44,10 +44,9 @@ define(function (require) {
                 var itemModel = data.getItemModel(idx);
                 var lineStyleModel = itemModel.getModel('lineStyle.normal');
                 elGroup.eachChild(function (child) {
-                    child.useStyle(zrUtil.extend(
+                    child.setStyle(zrUtil.extend(
                         lineStyleModel.getLineStyle(),
                         {
-                            fill: null,
                             stroke: data.getItemVisual(idx, 'color'),
                             opacity: data.getItemVisual(idx, 'opacity')
                         }
@@ -104,7 +103,7 @@ define(function (require) {
                                 shape: {
                                     points: pointPair
                                 }
-                            }, seriesModel, newDataIndex);
+                            }, seriesModel);
                         }
                     }
                 );
