@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<title>pie</title>
+	<style>
+		html, body {
+		background-color: #3f475e;
+		}
+		#chart {
+		width: 500px;
+		height: 500px;
+		border: solid 1px #ccc;
+		}
+		#itemList {
+			margin: 5px 0;
+			padding: 5px;
+			background-color: #999;
+		}
+		#itemList > span {
+			display: inline-block;
+			margin: 0 5px;
+			height: 30px;
+			line-height: 30px;
+			border: solid 1px #ccc;
+		}
+	</style>
+	<script src="../dist/echarts.custom.js"></script>
+	</head>
+	<body>
+	<div id="chart"></div>
+	<div id="itemList">
+		<span>conditions:</span>
+	</div>
+
+<script src='./level3data.js'></script>
+<script>
+	var myChart = echarts.init(document.getElementById('chart'));
+
+	// 各级环的数据
+	var levelSeries = [
+		{
+			seriesId: '100',
+			name:'来源1',
+			type:'pie',
+			selectedMode: 'single',
+			radius: ['15%', '30%'],
+			label: {
+				normal: {
+					// position: 'outside',
+					// position: 'circle-center',
+					show: true,
+					position: 'btn-center',
+					textStyle: {
+						color: '#fff'
+					},
+					addBtn: true,
+					addBtnImg: './image/add_btn.png',
+					addBtnHover: true,
+					addBtnColor: 'rgba(255,128,128,0.3)'
+				}
+			},
+
+			data:datalvl1
+		},
+		{
+			seriesId: '200',
+			name:'来源2',
+			type:'pie',
+			selectedMode: 'single',
+			radius: ['40%', '55%'],
+			label: {
+				normal: {
+					// position: 'circle-center',
+					position: 'btn-center',
+					textStyle: {
+						color: '#fff'
+					},
+					addBtn: true,
+					addBtnImg: './image/add_btn.png',
+					addBtnHover: true
+				}
+			},
+
+			data:[]
+		},
+		{
+			seriesId: '200',
+			name:'来源3',
+			type:'pie',
+			// selectedMode: 'single',
+			radius: ['70%', '85%'],
+			label: {
+				normal: {
+					// position: 'circle-center',
+					position: 'btn-center',
+					textStyle: {
+						color: '#fff'
+					},
+					addBtn: true,
+					addBtnImg: './image/add_btn.png',
+				}
+			},
+
+			data:[]
+		}
+	];
+
+	var option = {
+		tooltip: {
+			position: 'inside',
+			// alwaysShowContent: true,
+			showContent: false,
+			hideDelay: 500,
+			enterable: true,
+			trigger: 'item',
+			formatter: '<div style="color:blue">aaa</div>{a} <br/>{b}: {c} ({d}%)'
+		},
+		legend: {
+			show: true,
+			data: ['a','b','c']
+		},
+		// 
+		series: [levelSeries[0]]
+	};
+	
+
+	myChart.setOption(option);
+
+	// 条件管理部分
+	
+	// 有展开第二级和第三级时，第一级的选中项
+	var curLvl1 = '';
+	// 有展开第三级时，第二级的选中项
+	var curLvl2 = '';
+	// 已选中的条件
+	var conditionList = []; //{level: 1|2|3, content:'text', parent: ['sdf','asd'], status: 1}
+
+	myChart.on("click", function (param) {
+		console.log(param);
+		var targetType = param.event.target.type;
+		var level = param.seriesIndex + 1;
+		var condition = param.name;
+		var i, j, hasCondition = false;
+
+		if (targetType == 'rect') {
+			// 判断当前级是否有添加相同条件
+			for (i = 0; i < conditionList.length; i++) {
+				if (conditionList[i].content == condition) {
+					hasCondition = true;
+					break;
+				}
+			}
+			// 判断父级有没有被添加条件
+			if (!hasCondition && level > 1) {
+				for (i = 0; i < conditionList.length; i++) {
+					if (conditionList[i].content == curLvl1 || conditionList[i].content == curLvl2) {
+						hasCondition = true;
+					}
+					if (hasCondition) {
+						break;
+					}
+				}
+			}
+			// 如果没有重复的条件，且当前选择的是第一二级的条件。
+			// 在添加之前剔除子集的条件。
+			if (!hasCondition && level < 3) {
+				for (i = 0; i < conditionList.length; i++) {
+					for (j = 0; j < conditionList[i].parent.length; j++) {
+						if (conditionList[i].parent[j] == condition) {
+							conditionList[i].status = 0;	
+						}
+					}	
+				}
+				var tmpList = [];
+				for (i = 0; i < conditionList.length; i++) {
+					if (conditionList[i].status) {
+						tmpList.push(conditionList[i]);
+					}
+				}
+				conditionList = tmpList;
+			}
+
+			// 如果没有相同条件，且父级也未被添加为条件。添加新条件
+			if (!hasCondition) {
+				var newCondition = {
+					level: level,
+					content: condition,
+					parent: [],
+					status: 1
+				};
+				if (level > 1) {
+					newCondition.parent.push(curLvl1);
+					if (level > 2) {
+						newCondition.parent.push(curLvl2);
+					}
+				}
+				conditionList.push(newCondition);
+				renderCondition(conditionList);
+			}
+			console.log(conditionList);
+		}
+	});
+	// 重绘条件
+	function renderCondition (conditionList) {
+		var i, str = '<span>conditions:</span>';
+		var odiv = document.getElementById("itemList");
+		for (i = 0; i < conditionList.length; i++) {
+			str += '<span>'+conditionList[i].content+'</span>';
+		}
+		odiv.innerHTML = str;
+
+	}
+
+	// 圆环图点击事件时，处理交互效果
+	myChart.on("pieselectchanged", function (param) {
+		console.log(param);
+		var i, nextLevelData;
+		var tmp = option.series;
+		var selectedLevel = 0;
+		// 判断当前选择事件发生在哪一级环上，结果可为0 1 2 3
+		for (i = 0; i < tmp.length; i++) {
+			for (j = 0; j < tmp[i].data.length; j++) {
+				if (param.name == tmp[i].data[j].name) {
+					selectedLevel = i+1;
+				}
+			}
+		}
+		// 只处理第一、二级环
+		if (selectedLevel < 1  || selectedLevel > 2) {
+			return ;
+		}
+
+		var curData = tmp[selectedLevel-1].data;	//当前环的数据
+		var hasSelected = false;	//环上是否有选中的块
+		var itemSelect = false;		//某一块的选中状态		
+		// 设置当前环上各块的选中状态
+		for (i = 0; i < curData.length; i++) {
+			itemSelect = param.selected[curData[i].name];
+			curData[i].selected = itemSelect;
+			curData[i].label.normal.show = itemSelect;
+			if (itemSelect) {
+				hasSelected = true;
+				if (selectedLevel == 1) {
+					curLvl1 = curData[i].name;
+				}
+				else if (selectedLevel == 2) {
+					curLvl2 = curData[i].name;	
+				}
+			}
+		}
+		if (!hasSelected) {
+			if (selectedLevel == 1) {
+				curLvl1 = '';
+			}
+			else if (selectedLevel == 2) {
+				curLvl2 = '';	
+			}
+		}
+		// 清除高于当前级别的环，刷新echart
+		for (i = tmp.length; i > selectedLevel; i--) {
+			tmp.pop();
+		}
+		myChart.setOption(option, true);
+		// 如果环上有选中的块，设置下一级环，否则重置各块为未选择中状态。
+		if (hasSelected) {
+			// 选择下一级的data
+			if (selectedLevel == 1) {
+				nextLevelData = datalvl2[curLvl1];
+			} else {
+				nextLevelData = datalvl3[curLvl2];
+			}
+			for (i = 0; i < nextLevelData.length; i++) {
+				nextLevelData[i].selected = false;
+				nextLevelData[i].label.normal.show = true;
+			}
+			levelSeries[selectedLevel].data = nextLevelData;
+			tmp.push(levelSeries[selectedLevel]);
+		} else {
+			for (i = 0; i < curData.length; i++) {
+				curData[i].selected = false;
+				curData[i].label.normal.show = true;
+			}
+		}
+		myChart.setOption(option, true);
+	});
+
+
+</script>
+	</body>
+</html>
