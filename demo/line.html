@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<title>pie</title>
+	<style>
+		html, body {
+		background-color: #3f475e;
+		}
+		#chart {
+		width: 800px;
+		height: 600px;
+		border: solid 1px #ccc;
+		}
+	</style>
+	<script src="../dist/echarts.custom.js"></script>
+	</head>
+	<body>
+	<div id="chart"></div>
+	<script>
+	// 测试连线图，走势
+
+	var option = {
+			title: {
+				text: '',
+				left: 'center'
+			},
+			color: ['#c22b44','#e79719','#f2d139','#2eb8db'],
+			tooltip: {
+				trigger: 'axis',
+				axisPointer:{
+					lineStyle: {
+						color: '#8ba7bf'
+					}
+				},
+				textStyle: {
+					color: '#8ba7bf'
+				},
+				backgroundColor:'rgba(25,39,58,0.7)',
+				formatter: '{b}<br />{a0}: {c0}'
+			},
+			legend: {
+				left: 'left',
+				data: ['2的指数', '3的指数']
+			},
+			xAxis: {
+				type: 'category',
+				name: 'x',
+				boundaryGap: false,
+				splitLine: {
+					lineStyle: {
+						color: '#3f475e'
+					}
+				},
+				axisLabel: {
+					textStyle: {
+						color: '#8ba7bf'
+					}
+				},
+				data: ['03.29','03.31']
+			},
+			grid: {
+				left: '3%',
+				right: '4%',
+				bottom: '3%',
+				top: '6%',
+				containLabel: true
+			},
+			yAxis: {
+				type: 'value',
+				name: 'y',
+				splitLine: {
+					lineStyle: {
+						color: '#3f475e'
+					}
+				},
+				axisLabel: {
+					textStyle: {
+						color: '#8ba7bf'
+					}
+				}
+			},
+			series: [
+				{
+					name: '红色',
+					type: 'line',
+					symbol: 'circle',
+					data: []
+				}
+			]
+		};
+
+	</script>
+</body>
+</html>

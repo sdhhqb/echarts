@@ -57,8 +57,11 @@ define(function (require) {
                     ? 'right' : 'left';
             }
 
+            // legend有哪些类型
+            var legendItemMap = {};
+            // 已经绘制的legend
             var legendDrawedMap = {};
-
+            // 处理legend的data数组中的对象
             zrUtil.each(legendModel.getData(), function (itemModel) {
                 var name = itemModel.get('name');
 

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<title>dataroom</title>
+	<style>
+		html, body {
+		background-color: #3f475e;
+		}
+		#chart {
+		width: 1000px;
+		height: 500px;
+		margin-top: 50px;
+		border: solid 1px #ccc;
+		}
+		#slider {
+			width: 1000px;
+			height: 50px;
+		}
+	</style>
+	<script src="../dist/echarts.custom.js"></script>
+	</head>
+	<body>
+	<div id="slider"></div>
+	<!-- 筛选时间轴，横坐标为品牌分类，选择时间段之后重新累加各分类的数据 -->
+	<div id="chart"></div>
+
+	<script src="./data/datazoom_data2.js"></script>
+	<script>
+		var bbsList = ['长虹','小米','乐视','创维','海信','TCL'];
+		var bbsMap = {
+			'长虹':'ch',
+			'小米':'xm',
+			'乐视':'ls',
+			'创维':'cw',
+			'海信':'hx',
+			'TCL':'tcl'
+		}
+		var chartRef = echarts.init(document.getElementById("chart"));
+		var sliderRef = echarts.init(document.getElementById("slider"));
+
+		var option = {
+			color: ['#f195bc','#75cc9c','#6aaefc'],
+			grid: {
+				show: true,
+				backgroundColor: '#233247',
+				z: -10,
+				borderWidth: 0
+			},
+			legend: {
+				show: false,
+				textStyle:{
+						color:'#8ba7bf',
+				},
+				data:['回复量','点击量','关注度']
+			},
+			tooltip: {
+				show:true,
+				trigger: 'axis',
+				formatter: '{a0},{a1},{a2}<br />{b0},{b1},{b2}<br />{c0},{c1},{c2}',
+				onlyOneAxisTip: true
+			},
+			xAxis: [
+				{
+					type : 'category',
+					data : bbsList,
+					axisLabel:{
+						textStyle:{
+							color:'#8ba7bf',
+						}
+					},
+					splitLine: {
+						lineStyle: {
+							color: '#3f475e'
+						}
+					}
+				},
+				{
+					type : 'category',
+					data : [],
+					axisLine: {
+						show: false
+					},
+					axisTick: {
+						show: false
+					},
+					axisLabel:{
+						show: false
+					},
+					splitLine: {
+						show: false
+					}
+				}
+			],
+			yAxis: [
+				{
+					name:'点击量/回复量',
+					position:'left',
+					nameTextStyle:{
+							color:'#8ba7bf'
+					},
+					type: 'value',
+					axisLabel: {
+						textStyle: {
+							color: '#8ba7bf'
+						}
+					},
+					axisLine: {
+						show: false
+					},
+					axisTick: {
+						show: false
+					},
+					splitLine: {
+						lineStyle: {
+							color: '#3f475e'
+						}
+					}
+				},
+				{
+					name:'关注度',
+					position:'right',
+					type: 'value',
+					nameTextStyle:{
+						color:'#8ba7bf'
+					},
+					axisLabel: {
+						textStyle: {
+							color: '#8ba7bf'
+						}
+					},
+					axisLine: {
+						show: false
+					},
+					axisTick: {
+						show: false
+					},
+					splitLine: {
+						lineStyle: {
+							color: '#3f475e'
+						},
+						show:false
+					}
+			}],
+			series: [
+				{
+					name:'回复量',
+					type:'bar',
+					barWidth:30,
+					barGap : '5%',
+					data:[]
+				},
+				{
+					name:'点击量',
+					type:'bar',
+					barWidth:30,
+					barGap : '40%',
+					smooth:true,
+					symbol: 'none',
+					data:[]
+				},
+				{
+					name:'关注度',
+					type:'line',
+					symbol:'circle',
+					data:[]
+				}
+			]
+		};
+
+		var sliderOption = {
+			xAxis: [
+				{
+					type : 'category',
+					data : [],
+					axisLine: {
+						show: false
+					},
+					axisTick: {
+						show: false
+					},
+					axisLabel:{
+						show: false
+					},
+					splitLine: {
+						show: false
+					}
+				}
+			],
+			grid: {
+				show: true,
+				height: 50,
+				borderColor: '#77f',
+				z: 1
+			},
+			yAxis: [
+				{
+					position:'left',
+					axisLine: {
+						show: false
+					},
+					axisTick: {
+						show: false
+					},
+					axisLabel:{
+						show: false
+					},
+					splitLine: {
+						show: false
+					}
+				}
+			],
+			dataZoom: [
+				{
+					type: 'slider',
+					xAxisIndex: 0,
+					show: true,
+					top: 'top',
+					dataBackgroundColor: '#233247',
+	    		handleColor: 'rgba(106,174,252,0.8)',
+	    		fillerColor: 'rgba(106,174,252,0.3)',
+	    		textStyle: {
+	    			color: '#ffffff'
+	    		},
+					startValue: 0,
+					endValue: 29
+				}
+			],
+			series: [
+				{
+					name:'tmp',
+					type:'line',
+					xAxisIndex: 0,
+					symbolSize: 0,
+					showSymbol: false,
+					itemStyle: {
+						normal: {
+							color: 'rgba(0,0,0,0)'
+						}
+					},
+					lineStyle: {
+						normal: {
+							color: 'rgba(0,0,0,0)'
+						}
+					},
+					areaStyle: {
+						normal: {
+							color: 'rgba(0,0,0,0)'
+						}
+					},
+					markPoint: {
+						itemStyle: {
+							normal: {
+								color: 'rgba(0,0,0,0)'
+							}
+						}
+					},
+					data:[],
+					z: 1
+				}
+			]
+		}
+
+
+		for (var i = 0; i < data['ch'].length; i++) {
+			sliderOption.xAxis[0].data.push(data['ch'][i].date);
+			// option.xAxis[1].data.push(i+1);
+			sliderOption.series[0].data.push(1+Math.random());
+		}
+		console.log(option.xAxis[1].data);
+
+		// 范围，包含两端点
+		var range = {
+			start: 0,
+			end: 29
+		};
+
+		function updateOption () {
+			var i, j, key = '';
+			var gz, hf, dj;
+			option.series[0].data = [];
+			option.series[1].data = [];
+			option.series[2].data = [];
+
+			// 处理选择的各个品牌的数据
+			for (i = 0; i < bbsList.length; i++) {
+				key = bbsMap[bbsList[i]];
+				hf = dj = gz = 0;
+				// 处理单个品牌的回复、点击、关注数据
+				for (j = range.start; j <= range.end; j++) {
+					if (j < data[key].length) {
+						hf += data[key][j].hf;
+						dj += data[key][j].dj;
+						gz += data[key][j].gz;
+					}
+				}
+				option.series[0].data.push(hf);
+				option.series[1].data.push(dj);
+				option.series[2].data.push(gz);
+			}
+		}
+
+		function drawChart() {
+			updateOption();
+			chartRef.setOption(option);
+		}
+		drawChart();
+		sliderRef.setOption(sliderOption);
+
+		var datalen = data['ch'].length-1;	//假设有10个刻度，只有9段距离
+		sliderRef.on('datazoom', function (event) {
+			var start = event.start;
+			var end = event.end;
+			start = Math.round(datalen/100*start);
+			end = Math.round(datalen/100*end);
+			console.log(event.start, event.end, '-', event.pstart, event.pend, '-', start, end, event.isPrecise, new Date().getTime());
+			range.start = start;
+			range.end = end;
+			drawChart();
+		});
+	</script>
+	</body>
+</html>

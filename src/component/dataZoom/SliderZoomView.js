@@ -638,9 +638,8 @@ define(function (require) {
          * This action will be throttled.
          * @private
          */
-        _dispatchZoomAction: function () {
+        _dispatchZoomAction: function (isPrecise) {
             var range = this._range;
-
             this.api.dispatchAction({
                 type: 'dataZoom',
                 from: this.uid,

@@ -42,3 +42,9 @@ require('./lib/component/timeline');
 require('./lib/component/toolbox');
 
 require('zrender/lib/vml/vml');
+/**
+ * @preserve
+ * 对echarts做了一些自定义修改。
+ * 源码位置: https://github.com/sdhhqb/echarts
+ */
+

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<title>dataroom</title>
+	<style>
+		html, body {
+		background-color: #3f475e;
+		}
+		#chart {
+		width: 1000px;
+		height: 500px;
+		margin-top: 50px;
+		border: solid 1px #ccc;
+		}
+	</style>
+	<script src="../dist/echarts.custom.js"></script>
+	</head>
+	<body>
+	<!-- 筛选时间轴，横坐标为时间 -->
+	<div id="chart"></div>
+
+	<script src="./data/datazoom_data1.js"></script>
+	<script>
+		var base = new Date(2015, 0, 0).getTime();
+		var oneDay = 24 * 3600 * 1000;
+		var date = [];
+		var data1 = [];
+		var data2 = [];
+
+		for (var i = 0; i < 180; i++) {
+		    var now = new Date(base += oneDay);
+		    data1.push([new Date(now.getTime()).getTime(), Math.round((Math.random() - 0.5) * 20 + 30)]);
+		    data2.push([new Date(now.getTime()).getTime(), Math.round((Math.random() - 0.5) * 20 + 30)]);
+		}
+		var chartRef = echarts.init(document.getElementById("chart"));
+
+		var option = {
+			color: ['#6aaefc','#c22b44'],
+			tooltip: {
+				show: true,
+				trigger: 'axis'
+			},
+			grid: {
+				show: true,
+				backgroundColor: '#233247',
+				z: -10,
+				borderWidth: 0
+			},
+			xAxis: {
+        // type: 'time',
+        // type: 'value',
+        type: 'category',
+        scale: true,
+        splitNumber: 30,
+        boundaryGap: false,
+        // interval: 24*3600*1000,
+        axisLine: {
+        	lineStyle: {
+        		color: '#233247'
+        	}
+        },
+        axisLabel: {
+        	formatter: function (value, index) {
+					    // 格式化成月/日，只在第一个刻度显示年份
+					    if (typeof value !== 'number') {
+					    	return value;
+					    }
+					    var date = new Date(value);
+					    var texts = [(date.getMonth() + 1), date.getDate()];
+					    // if (index === 0) {
+					        texts.unshift(date.getFullYear());
+					    // }
+					    return texts.join('-');
+					},
+					rotate: 60,
+					textStyle: {
+						color: '#fff'
+					}
+				},
+				splitLine: {
+            show: false
+        },
+        axisTick: {
+          inside: true,
+          length: 8,
+          lineStyle: {
+          	color: '#4e5770'
+          }
+        },
+        data: []
+    	},
+	    yAxis: {
+        type: 'value',
+        boundaryGap: [0, '100%'],
+        axisLabel: {
+					textStyle: {
+						color: '#8ba7bf'
+					}
+				},
+				axisLine: {
+					show: false
+				},
+				axisTick: {
+          show: false
+        },
+        splitLine: {
+        	lineStyle: {
+        		color: '#3f475e'
+        	}
+        }
+	    },
+	    dataZoom: [{
+        type: 'inside',
+        // start: 0,
+        // end: 10
+        startValue: 0,
+      	endValue: 29
+        // startValue: data.risk[0][0],
+        // endValue: data.risk[30][0]
+	    }, {
+	    		show: true,
+	    		top: 'top',
+	    		// backgroundColor: 'rgba(78,87,112,0.4)',
+	    		dataBackgroundColor: '#233247',
+	    		handleColor: 'rgba(106,174,252,0.8)',
+	    		fillerColor: 'rgba(106,174,252,0.3)',
+	    		textStyle: {
+	    			color: '#ffffff'
+	    		},
+	        // start: 0,
+	        // end: 10,
+	        startValue: 0,
+        	endValue: 29,
+        	// startValue: data.risk[0][0],
+        	// endValue: data.risk[30][0]
+	    }],
+	    series: [
+	        {
+	            name:'负面舆情走势',
+	            type:'line',
+	            smooth:true,
+	            symbol: 'circle',
+	            data:[]
+	        },
+	        {
+	            name:'风险值',
+	            type:'line',
+	            smooth:true,
+	            symbol: 'none',
+	            data:[]
+	        }
+	    ]
+		};
+
+		for (var i = 0; i < data.risk.length; i++) {
+			option.xAxis.data.push(new Date(data.risk[i][0]).toLocaleString().split(' ')[0]);
+		}
+
+		function drawChart() {
+			for (var i = 0; i < data.risk.length; i++) {
+				option.series[0].data.push(data.negative[i][1]);
+				option.series[1].data.push(data.risk[i][1]);
+				// option.series[0].data.push(data.negative[i]);
+				// option.series[1].data.push(data.risk[i]);
+			}
+			chartRef.setOption(option);
+		}
+		drawChart();
+	</script>
+	</body>
+</html>

@@ -1,5 +1,6 @@
 /**
  * @module echarts/model/Model
+ * echarts基础model类型，很多其他model都是从这个model扩展出来的。
  */
 define(function (require) {
 

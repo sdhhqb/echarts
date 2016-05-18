@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<title>pie</title>
+	<style>
+		html, body {
+		background-color: #3f475e;
+		}
+		#chart {
+		width: 500px;
+		height: 500px;
+		border: solid 1px #ccc;
+		}
+	</style>
+	<script src="../dist/echarts.custom.js"></script>
+	</head>
+	<body>
+	<div id="chart"></div>
+
+	<script>
+var pos = {
+	// 热帖点位置
+	rt: [
+		{x: -240, y: 195},
+		{x: -230, y: 215}
+	],
+	// 热点事件点位
+	rdsj: [
+		{x: -210, y: 240},
+		{x: -200, y: 210},
+		{x: -200, y: 260}
+	],
+	// 热点产品点位
+	rdcp: [
+		{x: -210, y: 290},
+		{x: -250, y: 280},
+		{x: -275, y: 300}
+	],
+	// 热点新闻点位
+	rdxw: [
+		{x: -300, y: 270},
+		{x: -280, y: 240}
+	],
+	//活动点位置
+	hd: [
+		{x: -290, y: 210},
+		{x: -260, y: 220}
+	]
+};
+// 类型和分类号映射
+var typeMap = {
+	rt: {key: '热帖', val:0},
+	rdsj: {key: '热点事件', val:1},
+	rdcp: {key: '热点产品', val:2},
+	rdxw: {key: '热点新闻', val:3},
+	hd: {key: '活动', val:4},
+	bp: {key: '品牌', val:5},
+};
+// 生成点位和链接数据
+function getNodes () {
+	var i, k, tmp, data = [], link = [];
+	var idIndex = 0;
+	data.push({
+		category: 5,
+		id: 0,
+		label: {normal: {show: true}},
+		name: '长虹',
+		symbolSize: 40,
+		value: 50,
+		x: -250,
+		y: 250
+	});
+	for (k in pos) {
+		for (i = 0; i < pos[k].length; i++) {
+			idIndex += 1;
+			tmp = {
+					category: typeMap[k].val,
+					id: idIndex,
+					label: {normal: {show: true}},
+					name: i == 0 ? typeMap[k].key : typeMap[k].key+i,
+					// symbolSize: i == 0 ? 30 : 20,
+					symbolSize: 30,
+					value: Math.round(Math.random()*9)+1,
+					x: pos[k][i].x,
+					y: pos[k][i].y
+			}
+			data.push(tmp);
+			link.push({
+				source: idIndex,
+				target: 0
+			});
+		}
+	}
+	return {
+		data: data,
+		link: link
+	};
+}
+	var myChart = echarts.init(document.getElementById('chart'));
+	var chartRef = myChart;
+
+	var nodes = getNodes();
+		var option = {
+			title: {
+				show: false,
+				text: 'Les Miserables',
+				subtext: 'Default layout',
+				top: 'bottom',
+				left: 'right'
+			},
+			tooltip: {},
+			legend: {
+				show: false
+			},
+			series : [
+				{
+					name: 'cloud',
+					type: 'graph',
+					data: nodes.data,
+					links: nodes.link,
+					color: ['#eaa97a','#ebc8af','#6aaefc','#94b8e2','#ebc8af'],
+					categories: [
+						{name: '热帖'},
+						{name: '热点事件'},
+						{name: '热点新闻'},
+						{name: '热点产品'},
+						{name: '活动'},
+						{
+							name: '品牌',
+							itemStyle: {
+								normal: {
+									color: '#eaa97a'
+								}
+							}
+						},
+					],
+					roam: false,
+					label: {
+						normal: {
+							show: false,
+							formatter: '{b}',
+							textStyle: {
+								color: '#404040'
+							}
+						},
+						emphasis: {
+							show: false
+						}
+					},
+					lineStyle: {
+						normal: {
+							curveness: 0
+						}
+					}
+				}
+			]
+		};	
+
+	myChart.setOption(option);
+
+	</script>
+	</body>
+</html>

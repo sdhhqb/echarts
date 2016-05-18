@@ -32,7 +32,8 @@
     "url": "https://github.com/ecomfe/echarts.git"
   },
   "scripts": {
-    "prepublish": "node build/amd2common.js"
+    "prepublish": "node build/amd2common.js",
+    "dev": "webpack-dev-server --inline --content-base . --port 8088"
   },
   "dependencies": {
     "zrender": "^3.1.0"
@@ -44,6 +45,8 @@
     "estraverse": "^4.1.1",
     "fs-extra": "^0.26.5",
     "glob": "^7.0.0",
-    "webpack": "^1.12.13"
+    "webpack": "^1.12.13",
+    "webpack-dev-server": "^1.14.1",
+    "zrender": "^3.0.9"
   }
 }

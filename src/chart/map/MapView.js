@@ -100,18 +100,23 @@ define(function (require) {
                     circle.setStyle({
                         textPosition: 'bottom'
                     });
+                    var name = data.getName(idx);
 
                     var onEmphasis = function () {
+                        var isSelected = mapModel.isSelected(name);
+
                         circle.setStyle({
-                            text: hoverLabelModel.get('show') ? labelText : '',
+                            text: hoverLabelModel.get('show') || isSelected ? labelText : '',
                             textFill: hoverTextStyleModel.getTextColor(),
                             textFont: hoverTextStyleModel.getFont()
                         });
                     };
 
                     var onNormal = function () {
+                        var isSelected = mapModel.isSelected(name);
+
                         circle.setStyle({
-                            text: labelModel.get('show') ? labelText : '',
+                            text: labelModel.get('show') || isSelected ? labelText : '',
                             textFill: textStyleModel.getTextColor(),
                             textFont: textStyleModel.getFont()
                         });

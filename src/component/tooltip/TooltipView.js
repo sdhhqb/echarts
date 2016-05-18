@@ -502,7 +502,14 @@ define(function (require) {
 
             this._showAxisPointer();
             var allNotShow = true;
-            zrUtil.each(this._seriesGroupByAxis, function (seriesCoordSysSameAxis) {
+            // 有两条x坐标轴时，在tooltip配置里面设置onlyOneAxisTip为true时，只允许第一条坐标轴有tooltip
+            var onlyOneAxisTip = tooltipModel.get('onlyOneAxisTip');
+            zrUtil.each(this._seriesGroupByAxis, function (seriesCoordSysSameAxis, index) {
+                if (onlyOneAxisTip) {
+                    if (index != 'x0') {
+                        return;                        
+                    }
+                }
                 // Try show the axis pointer
                 var allCoordSys = seriesCoordSysSameAxis.coordSys;
                 var coordSys = allCoordSys[0];

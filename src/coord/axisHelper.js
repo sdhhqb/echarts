@@ -148,7 +148,7 @@ define(function (require) {
      * @param {boolean} isAxisHorizontal
      * @return {number}
      */
-    axisHelper.getAxisLabelInterval = function (tickCoords, labels, font, isAxisHorizontal) {
+    axisHelper.getAxisLabelInterval = function (tickCoords, labels, font, isAxisHorizontal, splitNumber) {
         // FIXME
         // 不同角的axis和label，不只是horizontal和vertical.
 
@@ -160,6 +160,9 @@ define(function (require) {
         if (labels.length > 40) {
             // Simple optimization for large amount of labels
             step = Math.round(labels.length / 40);
+        }
+        if (splitNumber > 0) {
+            return Math.round(labels.length/splitNumber - 1);
         }
         for (var i = 0; i < tickCoords.length; i += step) {
             var tickCoord = tickCoords[i];
