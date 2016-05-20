@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>1929-2015中国历年出生人口数</title>
+		<meta name="description" content="1929-2015中国历年出生人口数走势图">
+		<meta name="Keywords" content="1929,2015,中国,出生人口,走势">
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+			}
+			html, body {
+			background-color: #3f475e;
+			}
+			#chart {
+				margin: 50px auto;
+				width: 90%;
+				height: 600px;
+			}
+		</style>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/3.1.10/echarts.common.min.js"></script>
+		<script src="./js/population_data.js"></script>
+		<script>
+		var _hmt = _hmt || [];
+		(function() {
+		  var hm = document.createElement("script");
+		  hm.src = "//hm.baidu.com/hm.js?6bcd4a3faf85e3e535d96d5a4f0fcef6";
+		  var s = document.getElementsByTagName("script")[0]; 
+		  s.parentNode.insertBefore(hm, s);
+		})();
+		</script>
+	</head>
+	<body>
+		<div id="chart"></div>
+
+<script>
+var option = {
+	color: ['#6aaefc','#c22b44'],
+  title: {
+      text: '1929-2015中国历年出生人口数',
+      textStyle: {
+      	color: '#f1f1f1'
+      }
+  },
+  tooltip: {
+      trigger: 'axis',
+      textStyle: {
+      	color: '#f1f1f1'
+      }
+  },
+  grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true,
+			show: true,
+			backgroundColor: '#233247',
+			z: -10,
+			borderWidth: 0
+  },
+  xAxis: {
+      type: 'category',
+      axisLine: {
+      	lineStyle: {
+      		color: '#233247'
+      	}
+      },
+      axisLabel: {
+				rotate: 45,
+				textStyle: {
+					color: '#8ba7bf'
+				}
+			},
+			splitLine: {
+          show: false
+      },
+      axisTick: {
+        inside: true,
+        length: 8,
+        lineStyle: {
+        	color: '#4e5770'
+        }
+      },
+      boundaryGap: false,
+      data: []
+  },
+  yAxis: {
+      type: 'value',
+      axisLabel: {
+				textStyle: {
+					color: '#8ba7bf'
+				}
+			},
+			axisLine: {
+				show: false
+			},
+			axisTick: {
+        show: false
+      },
+      splitLine: {
+      	lineStyle: {
+      		color: '#3f475e'
+      	}
+      }
+  },
+  series: [
+      {
+          name:'人数',
+          type:'line',
+          smooth:true,
+          symbol: 'circle',
+          lineStyle: {
+              normal: {
+                  color: '#6aaefc'
+              }
+          },
+          data:[]
+      }
+  ]
+};
+
+var axisData = [];
+var seriesData = [];
+for (var i = 0; i < populationData.length; i++) {
+	axisData.push(populationData[i].year);
+	seriesData.push(populationData[i].population);
+}
+option.xAxis.data = axisData;
+option.series[0].data = seriesData;
+
+var myChart = echarts.init(document.getElementById('chart'));
+myChart.setOption(option);
+
+</script>
+</body>
+</html>

@@ -13,82 +13,47 @@
 		border: solid 1px #ccc;
 		}
 	</style>
-	<script src="../dist/echarts.custom.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/3.1.10/echarts.common.min.js"></script>
 	</head>
 	<body>
 	<div id="chart"></div>
 	<script>
-	// 测试连线图，走势
+		option = {
+    title: {
+        text: 'population'
+    },
+    tooltip: {
+        trigger: 'axis'
+    },
+    legend: {
+        data:['num']
+    },
+    grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+    },
+    xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: [1929, 1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950, 1951, 1952, 1953, 1954, 1955, 1956, 1957, 1958, 1959, 1960, 1961, 1962, 1963, 1964, 1965, 1966, 1967, 1968, 1969, 1970, 1971, 1972, 1973, 1974, 1975, 1976, 1977, 1978, 1979, 1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014]
+    },
+    yAxis: {
+        type: 'value'
+    },
+    series: [
+        {
+            name:'num',
+            type:'line',
+            stack: '总量',
+            data:[5045743,6499332,5792092,6503311,7456399,7220066,7808592,8248125,8128275,8611865,7574442,9141141,8925171,8869780,8821540,9708711,10045173,10858446,11737540,12083027,13913927,14711260,14413123,17236621,16745695,18513434,18612172,17364027,18998424,17135981,13059787,14684726,11414017,20923112,27866189,24144848,24799129,24828470,21736582,27718516,25018386,28012344,25160381,24800391,23630435,22874423,21136635,20491797,17931155,18831591,18924822,18393809,19122938,23100427,20065048,20313426,20429326,23190076,25282644,24576191,25137678,26210044,20082026,18752106,17914756,16470140,16933559,15224282,14454335,14010711,11495247,13793799,17020000,16470000,15990000,15930000,16170000,15840000,15940000,16080000,16150000,15740000,16040000,16350000,16400000,16870000]
+        }
+    ]
+};
 
-	var option = {
-			title: {
-				text: '',
-				left: 'center'
-			},
-			color: ['#c22b44','#e79719','#f2d139','#2eb8db'],
-			tooltip: {
-				trigger: 'axis',
-				axisPointer:{
-					lineStyle: {
-						color: '#8ba7bf'
-					}
-				},
-				textStyle: {
-					color: '#8ba7bf'
-				},
-				backgroundColor:'rgba(25,39,58,0.7)',
-				formatter: '{b}<br />{a0}: {c0}'
-			},
-			legend: {
-				left: 'left',
-				data: ['2的指数', '3的指数']
-			},
-			xAxis: {
-				type: 'category',
-				name: 'x',
-				boundaryGap: false,
-				splitLine: {
-					lineStyle: {
-						color: '#3f475e'
-					}
-				},
-				axisLabel: {
-					textStyle: {
-						color: '#8ba7bf'
-					}
-				},
-				data: ['03.29','03.31']
-			},
-			grid: {
-				left: '3%',
-				right: '4%',
-				bottom: '3%',
-				top: '6%',
-				containLabel: true
-			},
-			yAxis: {
-				type: 'value',
-				name: 'y',
-				splitLine: {
-					lineStyle: {
-						color: '#3f475e'
-					}
-				},
-				axisLabel: {
-					textStyle: {
-						color: '#8ba7bf'
-					}
-				}
-			},
-			series: [
-				{
-					name: '红色',
-					type: 'line',
-					symbol: 'circle',
-					data: []
-				}
-			]
-		};
+	var myChart = echarts.init(document.getElementById('chart'));
+	myChart.setOption(option);
 
 	</script>
 </body>
